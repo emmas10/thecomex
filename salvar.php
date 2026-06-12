@@ -1,4 +1,11 @@
 <?php
+include 'verifica_login.php';
+include 'conexao.php';
+
+if ($_SESSION['usuario_tipo'] != 'admin') {
+    echo "Acesso negado.";
+    exit;
+}
 include 'conexao.php';
 $cotacao = $_POST['cotacao'];
 $produto = $_POST['produto'];

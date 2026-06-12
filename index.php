@@ -1,4 +1,7 @@
-<?php include 'conexao.php'; ?>
+<?php
+include 'verifica_login.php';
+include 'conexao.php';
+?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -35,6 +38,19 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_ass
         <p><?php echo $totalCompras; ?></p>
     </div>
 </div>
+<a href="ranking.php" class="botao-exportar">
+    Ranking de Fornecedores
+</a>
+
+<p>
+    Logado como: <strong><?php echo $_SESSION['usuario_nome']; ?></strong>
+    | Perfil: <strong><?php echo $_SESSION['usuario_tipo']; ?></strong>
+    | <a href="logout.php">Sair</a>
+</p>
+
+<?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
+    <a href="cadastro.php" class="botao-exportar">Cadastrar Usuário</a>
+<?php } ?>
 
 <h2>Menor Preço por Produto</h2>
 
@@ -111,7 +127,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_ass
     }
     ?>
 </table>
-
+<?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
 <h2>Nova Cotação</h2>
 
 <form action="salvar.php" method="POST">
@@ -126,19 +142,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_ass
 
     <button type="submit">Salvar Cotação</button>
 </form>
-
-<h2>Registrar Compra Realizada</h2>
-
-<form action="salvar_compra.php" method="POST">
-    <input type="text" name="produto" placeholder="Produto comprado" required>
-    <input type="text" name="fornecedor" placeholder="Fornecedor" required>
-    <input type="number" step="0.01" name="preco_pago" placeholder="Preço pago USD" required>
-    <input type="text" name="quantidade" placeholder="Quantidade">
-    <input type="date" name="data_compra" required>
-    <input type="text" name="observacoes" placeholder="Observações">
-
-    <button type="submit">Salvar Compra</button>
-</form>
+<?php } ?>
 
 <h2>Últimas Cotações</h2>
 
@@ -163,6 +167,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_ass
         <th>Origem</th>
         <th>Pagamento</th>
         <th>Data</th>
+        <th>Ação</th>
     </tr>
 
     <?php
@@ -239,7 +244,19 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_ass
         echo "<td>" . $linha['origem'] . "</td>";
         echo "<td>" . $linha['pagamento'] . "</td>";
         echo "<td>" . $linha['data_cotacao'] . "</td>";
-        echo "</tr>";
+
+       if ($_SESSION['usuario_tipo'] == 'admin') {
+    echo "<td>";
+    echo "<form action='comprar_cotacao.php' method='POST' style='display:inline;'>";
+    echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
+    echo "<button type='submit'>Cotação Comprada</button>";
+    echo "</form>";
+    echo "</td>";
+} else {
+    echo "<td>Somente visualização</td>";
+}
+
+echo "</tr>";
     }
     ?>
 </table>
