@@ -1,11 +1,6 @@
 <?php
-include 'verifica_login.php';
+session_start();
 include 'conexao.php';
-
-if ($_SESSION['usuario_tipo'] != 'admin') {
-    echo "Acesso negado.";
-    exit;
-}
 
 $mensagem = '';
 
@@ -38,8 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="container">
     <h1>Cadastro de Usuários</h1>
 
-    <a href="index.php" class="botao-exportar">Voltar</a>
-
     <?php if ($mensagem != '') { echo "<p>$mensagem</p>"; } ?>
 
     <form method="POST">
@@ -49,6 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 
         <button type="submit">Cadastrar Usuário</button>
+        <p style="margin-top:15px;">
+           Já tem conta?
+          <a href="login.php">Clique aqui</a>
+</p>
     </form>
 </div>
 

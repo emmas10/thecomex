@@ -1,34 +1,30 @@
 <?php
+include 'verifica_login.php';
 include 'conexao.php';
 
-$id = $_POST['id'];
-
-// Busca a cotação selecionada
-$sql = "SELECT * FROM cotacoes WHERE id = $id";
-$resultado = $conn->query($sql);
-
-if ($resultado->num_rows > 0) {
-
-    $cotacao = $resultado->fetch_assoc();
-
-    $produto = $cotacao['produto'];
-    $fornecedor = $cotacao['fornecedor'];
-    $preco = $cotacao['preco'];
-    $quantidade = $cotacao['quantidade'];
-    $data = date('Y-m-d');
-
-    // Registra automaticamente na tabela compras
-    $sqlCompra = "
-        INSERT INTO compras
-        (produto, fornecedor, preco_pago, quantidade, data_compra)
-        VALUES
-        ('$produto', '$fornecedor', '$preco', '$quantidade', '$data')
-    ";
-
-    $conn->query($sqlCompra);
+if ($_SESSION['usuario_tipo'] != 'admin') {
+    echo "Acesso negado.";
+    exit;
 }
 
-// Volta para a página principal
+$id = intval($_POST['id']);
+
+$sql = "
+INSERT INTO compras 
+(produto, fornecedor, preco_pago, quantidade, data_compra, cotacao_id, status)
+
+SELECT 
+produto, fornecedor, preco, quantidade, CURDATE(), id, 'ativa'
+FROM cotacoes
+WHERE id = $id
+
+ON DUPLICATE KEY UPDATE
+status = 'ativa',
+data_compra = CURDATE()
+";
+
+$conn->query($sql);
+
 header("Location: index.php");
 exit;
 ?>

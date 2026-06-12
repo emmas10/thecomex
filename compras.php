@@ -1,31 +1,21 @@
-<?php include 'conexao.php'; ?>
+<?php
+include 'verifica_login.php';
+include 'conexao.php';
+?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Histórico de Compras - TheComex</title>
+    <title>Compras - TheComex</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
-    <h1>Histórico de Compras</h1>
+    <h1>Compras Realizadas</h1>
 
-    <a href="index.php">Voltar para Cotações</a>
-
-    <form action="salvar_compra.php" method="POST">
-        <input type="text" name="produto" placeholder="Produto" required>
-        <input type="text" name="fornecedor" placeholder="Fornecedor" required>
-        <input type="number" step="0.01" name="preco_pago" placeholder="Preço pago USD" required>
-        <input type="text" name="quantidade" placeholder="Quantidade">
-        <input type="date" name="data_compra" required>
-        <input type="text" name="observacoes" placeholder="Observações">
-
-        <button type="submit">Salvar Compra</button>
-    </form>
-
-    <h2>Compras Registradas</h2>
+    <a href="index.php" class="botao-exportar">Voltar</a>
 
     <table>
         <tr>
@@ -34,7 +24,8 @@
             <th>Preço Pago</th>
             <th>Quantidade</th>
             <th>Data</th>
-            <th>Observações</th>
+            <th>Status</th>
+            <th>Ação</th>
         </tr>
 
         <?php
@@ -42,13 +33,31 @@
         $resultado = $conn->query($sql);
 
         while ($linha = $resultado->fetch_assoc()) {
-            echo "<tr>";
+            if ($linha['status'] == 'cancelada') {
+                echo "<tr style='background:#f8d7da; color:#842029;'>";
+            } else {
+                echo "<tr>";
+            }
+
             echo "<td>" . $linha['produto'] . "</td>";
             echo "<td>" . $linha['fornecedor'] . "</td>";
-            echo "<td>USD " . $linha['preco_pago'] . "</td>";
+            echo "<td>USD " . number_format($linha['preco_pago'], 2, ',', '.') . "</td>";
             echo "<td>" . $linha['quantidade'] . "</td>";
             echo "<td>" . $linha['data_compra'] . "</td>";
-            echo "<td>" . $linha['observacoes'] . "</td>";
+            echo "<td>" . $linha['status'] . "</td>";
+
+            echo "<td>";
+
+            if ($_SESSION['usuario_tipo'] == 'admin' && $linha['status'] != 'cancelada') {
+                echo "<form action='cancelar_compra.php' method='POST' style='display:inline;'>";
+                echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
+                echo "<button type='submit' onclick=\"return confirm('Deseja cancelar esta compra?')\">Cancelar Compra</button>";
+                echo "</form>";
+            } else {
+                echo "-";
+            }
+
+            echo "</td>";
             echo "</tr>";
         }
         ?>

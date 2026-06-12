@@ -17,7 +17,7 @@ include 'conexao.php';
 <?php
 $totalCotacoes = $conn->query("SELECT COUNT(*) as total FROM cotacoes")->fetch_assoc()['total'];
 $totalProdutos = $conn->query("SELECT COUNT(DISTINCT produto) as total FROM cotacoes")->fetch_assoc()['total'];
-$totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_assoc()['total'];
+$totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status = 'ativa'")->fetch_assoc()['total'];
 ?>
 
 <h1>TheComex - Cadastro de Cotações</h1>
@@ -244,17 +244,46 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras")->fetch_ass
         echo "<td>" . $linha['origem'] . "</td>";
         echo "<td>" . $linha['pagamento'] . "</td>";
         echo "<td>" . $linha['data_cotacao'] . "</td>";
+        echo "<td>";
 
-       if ($_SESSION['usuario_tipo'] == 'admin') {
-    echo "<td>";
-    echo "<form action='comprar_cotacao.php' method='POST' style='display:inline;'>";
+echo "<td>";
+
+if ($_SESSION['usuario_tipo'] == 'admin') {
+
+    $idCotacao = $linha['id'];
+
+    $sqlComprada = "SELECT * FROM compras WHERE cotacao_id = $idCotacao AND status = 'ativa' LIMIT 1";
+    $resultadoComprada = $conn->query($sqlComprada);
+
+    if ($resultadoComprada->num_rows > 0) {
+        $compra = $resultadoComprada->fetch_assoc();
+
+        echo "<strong style='color:green;'>Já comprada</strong><br>";
+
+        echo "<form action='excluir_compra.php' method='POST' style='display:inline;'>";
+        echo "<input type='hidden' name='id' value='" . $compra['id'] . "'>";
+        echo "<button type='submit' onclick=\"return confirm('Deseja cancelar esta compra?')\">Excluir Compra</button>";
+        echo "</form>";
+
+    } else {
+        echo "<form action='comprar_cotacao.php' method='POST' style='display:inline;'>";
+        echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
+        echo "<button type='submit' onclick='this.disabled=true; this.form.submit();'>Comprar Cotação</button>";
+        echo "</form>";
+    }
+
+    echo " ";
+
+    echo "<form action='excluir_cotacao.php' method='POST' style='display:inline;'>";
     echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
-    echo "<button type='submit'>Cotação Comprada</button>";
+    echo "<button type='submit' onclick=\"return confirm('Deseja excluir esta cotação?')\">Excluir Cotação</button>";
     echo "</form>";
-    echo "</td>";
+
 } else {
-    echo "<td>Somente visualização</td>";
+    echo "Somente visualização";
 }
+
+echo "</td>";
 
 echo "</tr>";
     }
