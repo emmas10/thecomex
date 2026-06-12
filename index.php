@@ -64,41 +64,50 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     </tr>
 
     <?php
-    $sqlProdutos = "
-        SELECT 
-            produtos.produto_base,
+   $sqlProdutos = "
+    SELECT 
+        produtos.produto_base,
 
-            cot.fornecedor AS fornecedor_cotado,
-            cot.preco AS menor_preco_cotado,
+        cot.fornecedor AS fornecedor_cotado,
+        cot.preco AS menor_preco_cotado,
 
-            comp.fornecedor AS fornecedor_comprado,
-            comp.preco_pago AS menor_preco_comprado
+        comp.fornecedor AS fornecedor_comprado,
+        comp.preco_pago AS menor_preco_comprado
 
-        FROM (
-            SELECT TRIM(LOWER(produto)) AS produto_base FROM cotacoes
-            UNION
-            SELECT TRIM(LOWER(produto)) AS produto_base FROM compras
-        ) produtos
+    FROM (
+        SELECT TRIM(LOWER(produto)) AS produto_base FROM cotacoes
 
-        LEFT JOIN cotacoes cot
-        ON TRIM(LOWER(cot.produto)) = produtos.produto_base
-        AND cot.preco = (
-            SELECT MIN(c2.preco)
-            FROM cotacoes c2
-            WHERE TRIM(LOWER(c2.produto)) = produtos.produto_base
-        )
+        UNION
 
-        LEFT JOIN compras comp
-        ON TRIM(LOWER(comp.produto)) = produtos.produto_base
-        AND comp.preco_pago = (
-            SELECT MIN(c3.preco_pago)
-            FROM compras c3
-            WHERE TRIM(LOWER(c3.produto)) = produtos.produto_base
-        )
+        SELECT TRIM(LOWER(produto)) AS produto_base 
+        FROM compras
+        WHERE status = 'ativa'
+    ) produtos
 
-        GROUP BY produtos.produto_base
-        ORDER BY produtos.produto_base ASC
-    ";
+    LEFT JOIN cotacoes cot
+    ON TRIM(LOWER(cot.produto)) = produtos.produto_base
+    AND cot.preco = (
+        SELECT MIN(c2.preco)
+        FROM cotacoes c2
+        WHERE TRIM(LOWER(c2.produto)) = produtos.produto_base
+    )
+
+    LEFT JOIN compras comp
+    ON TRIM(LOWER(comp.produto)) = produtos.produto_base
+    AND comp.status = 'ativa'
+    AND comp.preco_pago = (
+        SELECT MIN(c3.preco_pago)
+        FROM compras c3
+        WHERE TRIM(LOWER(c3.produto)) = produtos.produto_base
+        AND c3.status = 'ativa'
+    )
+
+    WHERE cot.id IS NOT NULL 
+       OR comp.id IS NOT NULL
+
+    GROUP BY produtos.produto_base
+    ORDER BY produtos.produto_base ASC
+";
 
     $resultadoProdutos = $conn->query($sqlProdutos);
 
@@ -223,13 +232,13 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
 
             if ($valorDiferenca < 0) {
                 echo "<td style='color:green;font-weight:bold;'>
-                        🟢 Economia<br>
+                         Economia<br>
                         " . number_format(abs($diferenca), 2, ',', '.') . "%<br>
                         USD " . number_format(abs($valorDiferenca), 2, ',', '.') . "
                       </td>";
             } elseif ($valorDiferenca > 0) {
                 echo "<td style='color:red;font-weight:bold;'>
-                        🔴 Aumento<br>
+                         Aumento<br>
                         " . number_format($diferenca, 2, ',', '.') . "%<br>
                         USD " . number_format($valorDiferenca, 2, ',', '.') . "
                       </td>";
@@ -251,6 +260,7 @@ echo "<td>";
 if ($_SESSION['usuario_tipo'] == 'admin') {
 
     $idCotacao = $linha['id'];
+
 
     $sqlComprada = "SELECT * FROM compras WHERE cotacao_id = $idCotacao AND status = 'ativa' LIMIT 1";
     $resultadoComprada = $conn->query($sqlComprada);
