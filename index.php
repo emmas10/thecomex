@@ -119,7 +119,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         echo "<td>" . ($produto['fornecedor_cotado'] ?? 'Sem cotação') . "</td>";
 
         if ($produto['menor_preco_cotado'] !== null) {
-            echo "<td>USD " . number_format($produto['menor_preco_cotado'], 2, ',', '.') . "</td>";
+            echo "<td>R$ " . number_format($produto['menor_preco_cotado'], 2, ',', '.') . "</td>";
         } else {
             echo "<td>-</td>";
         }
@@ -127,7 +127,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         echo "<td>" . ($produto['fornecedor_comprado'] ?? 'Sem compra') . "</td>";
 
         if ($produto['menor_preco_comprado'] !== null) {
-            echo "<td>USD " . number_format($produto['menor_preco_comprado'], 2, ',', '.') . "</td>";
+            echo "<td>R$ " . number_format($produto['menor_preco_comprado'], 2, ',', '.') . "</td>";
         } else {
             echo "<td>-</td>";
         }
@@ -143,9 +143,9 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     <input type="text" name="cotacao" placeholder="Nome/Nº da Cotação" required>
     <input type="text" name="produto" placeholder="Produto" required>
     <input type="text" name="fornecedor" placeholder="Fornecedor" required>
-    <input type="number" step="0.01" name="preco" placeholder="Preço USD" required>
+    <input type="number" step="0.01" name="preco" placeholder="Preço R$" required>
     <input type="text" name="origem" placeholder="Origem">
-    <input type="text" name="pagamento" placeholder="Pagamento">
+    <input type="number" name="data_pagamento" placeholder="Data do Pagamento">
     <input type="text" name="quantidade" placeholder="Quantidade">
     <input type="date" name="data_cotacao" required>
 
@@ -174,7 +174,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         <th>Última Compra</th>
         <th>Diferença</th>
         <th>Origem</th>
-        <th>Pagamento</th>
+        <th>Data do Pagamento</th>
         <th>Data</th>
         <th>Ação</th>
     </tr>
@@ -211,7 +211,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         echo "<td>" . $linha['cotacao'] . "</td>";
         echo "<td>" . $linha['produto'] . "</td>";
         echo "<td>" . $linha['fornecedor'] . "</td>";
-        echo "<td>USD " . number_format($linha['preco'], 2, ',', '.') . "</td>";
+        echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
 
         $sqlCompra = "SELECT * FROM compras 
                       WHERE produto = '$produtoAtual'
@@ -228,19 +228,19 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
             $valorDiferenca = $linha['preco'] - $precoPago;
             $diferenca = ($valorDiferenca / $precoPago) * 100;
 
-            echo "<td>USD " . number_format($precoPago, 2, ',', '.') . "</td>";
+            echo "<td>R$ " . number_format($precoPago, 2, ',', '.') . "</td>";
 
             if ($valorDiferenca < 0) {
                 echo "<td style='color:green;font-weight:bold;'>
                          Economia<br>
                         " . number_format(abs($diferenca), 2, ',', '.') . "%<br>
-                        USD " . number_format(abs($valorDiferenca), 2, ',', '.') . "
+                        R$ " . number_format(abs($valorDiferenca), 2, ',', '.') . "
                       </td>";
             } elseif ($valorDiferenca > 0) {
                 echo "<td style='color:red;font-weight:bold;'>
                          Aumento<br>
                         " . number_format($diferenca, 2, ',', '.') . "%<br>
-                        USD " . number_format($valorDiferenca, 2, ',', '.') . "
+                        R$ " . number_format($valorDiferenca, 2, ',', '.') . "
                       </td>";
             } else {
                 echo "<td style='font-weight:bold;'>➖ Mesmo preço</td>";
@@ -251,7 +251,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         }
 
         echo "<td>" . $linha['origem'] . "</td>";
-        echo "<td>" . $linha['pagamento'] . "</td>";
+        echo "<td>" . $linha['data_pagamento'] . "</td>";
         echo "<td>" . $linha['data_cotacao'] . "</td>";
         echo "<td>";
 

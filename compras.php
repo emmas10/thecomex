@@ -41,7 +41,7 @@ include 'conexao.php';
 
             echo "<td>" . $linha['produto'] . "</td>";
             echo "<td>" . $linha['fornecedor'] . "</td>";
-            echo "<td>USD " . number_format($linha['preco_pago'], 2, ',', '.') . "</td>";
+            echo "<td>R$ " . number_format($linha['preco_pago'], 2, ',', '.') . "</td>";
             echo "<td>" . $linha['quantidade'] . "</td>";
             echo "<td>" . $linha['data_compra'] . "</td>";
             echo "<td>" . $linha['status'] . "</td>";

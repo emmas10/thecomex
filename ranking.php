@@ -83,13 +83,13 @@
                 echo "<td>" . $linha['fornecedor'] . "</td>";
 
                 if ($linha['menor_preco_cotado'] !== null) {
-                    echo "<td>USD " . number_format($linha['menor_preco_cotado'], 2, ',', '.') . "</td>";
+                    echo "<td>R$ " . number_format($linha['menor_preco_cotado'], 2, ',', '.') . "</td>";
                 } else {
                     echo "<td>-</td>";
                 }
 
                 if ($linha['menor_preco_comprado'] !== null) {
-                    echo "<td>USD " . number_format($linha['menor_preco_comprado'], 2, ',', '.') . "</td>";
+                    echo "<td>R$ " . number_format($linha['menor_preco_comprado'], 2, ',', '.') . "</td>";
                 } else {
                     echo "<td>-</td>";
                 }
