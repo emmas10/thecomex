@@ -15,9 +15,45 @@ include 'conexao.php';
 <div class="container">
 
 <?php
-$totalCotacoes = $conn->query("SELECT COUNT(*) as total FROM cotacoes")->fetch_assoc()['total'];
-$totalProdutos = $conn->query("SELECT COUNT(DISTINCT produto) as total FROM cotacoes")->fetch_assoc()['total'];
-$totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status = 'ativa'")->fetch_assoc()['total'];
+if ($_SESSION['usuario_tipo'] == 'admin') {
+
+    $totalCotacoes = $conn->query(
+        "SELECT COUNT(*) as total FROM cotacoes"
+    )->fetch_assoc()['total'];
+
+    $totalProdutos = $conn->query(
+        "SELECT COUNT(DISTINCT produto) as total FROM cotacoes"
+    )->fetch_assoc()['total'];
+
+    $totalCompras = $conn->query(
+        "SELECT COUNT(*) as total FROM compras
+         WHERE status = 'ativa'"
+    )->fetch_assoc()['total'];
+
+} else {
+
+    $cliente_id = $_SESSION['cliente_id'];
+
+    $totalCotacoes = $conn->query(
+        "SELECT COUNT(*) as total
+         FROM cotacoes
+         WHERE cliente_id = '$cliente_id'"
+    )->fetch_assoc()['total'];
+
+    $totalProdutos = $conn->query(
+        "SELECT COUNT(DISTINCT produto) as total
+         FROM cotacoes
+         WHERE cliente_id = '$cliente_id'"
+    )->fetch_assoc()['total'];
+
+    $totalCompras = $conn->query(
+        "SELECT COUNT(*) as total
+         FROM compras
+         WHERE status = 'ativa'
+         AND cliente_id = '$cliente_id'"
+    )->fetch_assoc()['total'];
+
+}
 ?>
 
 <h1>TheComex - Cadastro de Cotações</h1>
@@ -65,7 +101,9 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     </tr>
 
     <?php
-   $sqlProdutos = "
+if ($_SESSION['usuario_tipo'] == 'admin') {
+
+$sqlProdutos = "
     SELECT 
         produtos.produto_base,
 
@@ -110,32 +148,64 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     ORDER BY produtos.produto_base ASC
 ";
 
-    $resultadoProdutos = $conn->query($sqlProdutos);
+} else {
 
-    while ($produto = $resultadoProdutos->fetch_assoc()) {
-        echo "<tr>";
+$cliente_id = $_SESSION['cliente_id'];
 
-        echo "<td>" . ucfirst($produto['produto_base']) . "</td>";
+$sqlProdutos = "
+    SELECT 
+        produtos.produto_base,
 
-        echo "<td>" . ($produto['fornecedor_cotado'] ?? 'Sem cotação') . "</td>";
+        cot.fornecedor AS fornecedor_cotado,
+        cot.preco AS menor_preco_cotado,
 
-        if ($produto['menor_preco_cotado'] !== null) {
-            echo "<td>R$ " . number_format($produto['menor_preco_cotado'], 2, ',', '.') . "</td>";
-        } else {
-            echo "<td>-</td>";
-        }
+        comp.fornecedor AS fornecedor_comprado,
+        comp.preco_pago AS menor_preco_comprado
 
-        echo "<td>" . ($produto['fornecedor_comprado'] ?? 'Sem compra') . "</td>";
+    FROM (
+        SELECT TRIM(LOWER(produto)) AS produto_base 
+        FROM cotacoes
+        WHERE cliente_id = '$cliente_id'
 
-        if ($produto['menor_preco_comprado'] !== null) {
-            echo "<td>R$ " . number_format($produto['menor_preco_comprado'], 2, ',', '.') . "</td>";
-        } else {
-            echo "<td>-</td>";
-        }
+        UNION
 
-        echo "</tr>";
-    }
-    ?>
+        SELECT TRIM(LOWER(produto)) AS produto_base 
+        FROM compras
+        WHERE status = 'ativa'
+        AND cliente_id = '$cliente_id'
+    ) produtos
+
+    LEFT JOIN cotacoes cot
+    ON TRIM(LOWER(cot.produto)) = produtos.produto_base
+    AND cot.cliente_id = '$cliente_id'
+    AND cot.preco = (
+        SELECT MIN(c2.preco)
+        FROM cotacoes c2
+        WHERE TRIM(LOWER(c2.produto)) = produtos.produto_base
+        AND c2.cliente_id = '$cliente_id'
+    )
+
+    LEFT JOIN compras comp
+    ON TRIM(LOWER(comp.produto)) = produtos.produto_base
+    AND comp.status = 'ativa'
+    AND comp.cliente_id = '$cliente_id'
+    AND comp.preco_pago = (
+        SELECT MIN(c3.preco_pago)
+        FROM compras c3
+        WHERE TRIM(LOWER(c3.produto)) = produtos.produto_base
+        AND c3.status = 'ativa'
+        AND c3.cliente_id = '$cliente_id'
+    )
+
+    WHERE cot.id IS NOT NULL 
+       OR comp.id IS NOT NULL
+
+    GROUP BY produtos.produto_base
+    ORDER BY produtos.produto_base ASC
+";
+
+}
+?>
 </table>
 <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
 <h2>Nova Cotação</h2>
@@ -161,7 +231,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     <input type="text" name="origem" placeholder="Origem">
     <div class="campo">
     <label>Data do Pagamento</label>
-    <input type="date" name="data_pagamento">
+    <input type="date" name="pagamento">
 </div>
     <input type="text" name="quantidade" placeholder="Quantidade">
     <div class="campo">
@@ -186,17 +256,24 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
 
 <table>
     <tr>
-        <th>Cotação</th>
-        <th>Produto</th>
-        <th>Fornecedor</th>
-        <th>Preço Cotado</th>
-        <th>Última Compra</th>
-        <th>Diferença</th>
-        <th>Origem</th>
-        <th>Data do Pagamento</th>
-        <th>Data</th>
-        <th>Ação</th>
-    </tr>
+
+<?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
+    <th>Empresa</th>
+<?php } ?>
+
+<th>Quem Cotou</th>
+<th>Cotação</th>
+<th>Produto</th>
+<th>Fornecedor</th>
+<th>Preço Cotado</th>
+<th>Última Compra</th>
+<th>Diferença</th>
+<th>Origem</th>
+<th>Data do Pagamento</th>
+<th>Data</th>
+<th>Ação</th>
+
+</tr>
 
     <?php
     $busca = isset($_GET['busca']) ? $_GET['busca'] : '';
@@ -204,13 +281,21 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     if ($_SESSION['usuario_tipo'] == 'admin') {
 
     if ($busca != '') {
-        $sql = "SELECT * FROM cotacoes 
-                WHERE produto LIKE '%$busca%' 
-                OR fornecedor LIKE '%$busca%'
-                OR cotacao LIKE '%$busca%'
-                ORDER BY criado_em DESC";
+        $sql = "SELECT cotacoes.*, clientes.nome_empresa, usuarios.nome AS usuario_nome 
+                FROM cotacoes 
+                LEFT JOIN clientes ON cotacoes.cliente_id = clientes.id
+                LEFT JOIN usuarios ON cotacoes.usuario_id = usuarios.id
+                WHERE cotacoes.produto LIKE '%$busca%' 
+                OR cotacoes.fornecedor LIKE '%$busca%'
+                OR cotacoes.cotacao LIKE '%$busca%'
+                OR clientes.nome_empresa LIKE '%$busca%'
+                ORDER BY cotacoes.criado_em DESC";
     } else {
-        $sql = "SELECT * FROM cotacoes ORDER BY criado_em DESC";
+        $sql = "SELECT cotacoes.*, clientes.nome_empresa, usuarios.nome AS usuario_nome
+                FROM cotacoes 
+                LEFT JOIN clientes ON cotacoes.cliente_id = clientes.id
+                LEFT JOIN usuarios ON cotacoes.usuario_id = usuarios.id
+                ORDER BY cotacoes.criado_em DESC";
     }
 
 } else {
@@ -218,18 +303,27 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     $cliente_id = $_SESSION['cliente_id'];
 
     if ($busca != '') {
-        $sql = "SELECT * FROM cotacoes 
-                WHERE cliente_id = '$cliente_id'
+
+        $sql = "SELECT cotacoes.*, usuarios.nome AS usuario_nome
+                FROM cotacoes
+                LEFT JOIN usuarios ON cotacoes.usuario_id = usuarios.id
+                WHERE cotacoes.cliente_id = '$cliente_id'
                 AND (
-                    produto LIKE '%$busca%' 
-                    OR fornecedor LIKE '%$busca%'
-                    OR cotacao LIKE '%$busca%'
+                    cotacoes.produto LIKE '%$busca%'
+                    OR cotacoes.fornecedor LIKE '%$busca%'
+                    OR cotacoes.cotacao LIKE '%$busca%'
+                    OR usuarios.nome LIKE '%$busca%'
                 )
-                ORDER BY criado_em DESC";
+                ORDER BY cotacoes.criado_em DESC";
+
     } else {
-        $sql = "SELECT * FROM cotacoes 
-                WHERE cliente_id = '$cliente_id'
-                ORDER BY criado_em DESC";
+
+        $sql = "SELECT cotacoes.*, usuarios.nome AS usuario_nome
+                FROM cotacoes
+                LEFT JOIN usuarios ON cotacoes.usuario_id = usuarios.id
+                WHERE cotacoes.cliente_id = '$cliente_id'
+                ORDER BY cotacoes.criado_em DESC";
+
     }
 
 }
@@ -240,26 +334,59 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         $produtoAtual = $linha['produto'];
         $dataCotacaoAtual = $linha['data_cotacao'];
 
-        $sqlMenor = "SELECT MIN(preco) AS menor_preco FROM cotacoes WHERE produto = '$produtoAtual'";
-        $resultadoMenor = $conn->query($sqlMenor);
-        $menor = $resultadoMenor->fetch_assoc()['menor_preco'];
+if ($_SESSION['usuario_tipo'] == 'admin') {
 
+    $sqlMenor = "SELECT MIN(preco) AS menor_preco
+                 FROM cotacoes
+                 WHERE produto = '$produtoAtual'";
+
+} else {
+
+    $cliente_id = $_SESSION['cliente_id'];
+
+    $sqlMenor = "SELECT MIN(preco) AS menor_preco
+                 FROM cotacoes
+                 WHERE produto = '$produtoAtual'
+                 AND cliente_id = '$cliente_id'";
+
+}
+
+$resultadoMenor = $conn->query($sqlMenor);
+$menor = $resultadoMenor->fetch_assoc()['menor_preco'];
         if ($linha['preco'] == $menor) {
             echo "<tr style='background-color: #d4edda; font-weight: bold;'>";
         } else {
             echo "<tr>";
         }
 
-        echo "<td>" . $linha['cotacao'] . "</td>";
-        echo "<td>" . $linha['produto'] . "</td>";
-        echo "<td>" . $linha['fornecedor'] . "</td>";
-        echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
+        if ($_SESSION['usuario_tipo'] == 'admin') {
+    echo "<td>" . $linha['nome_empresa'] . "</td>";
+}
 
-        $sqlCompra = "SELECT * FROM compras 
-                      WHERE produto = '$produtoAtual'
-                      AND data_compra <= '$dataCotacaoAtual'
-                      ORDER BY data_compra DESC 
-                      LIMIT 1";
+echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
+echo "<td>" . $linha['cotacao'] . "</td>";
+echo "<td>" . $linha['produto'] . "</td>";
+echo "<td>" . $linha['fornecedor'] . "</td>";
+echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
+
+       if ($_SESSION['usuario_tipo'] == 'admin') {
+    $sqlCompra = "SELECT * FROM compras 
+                  WHERE produto = '$produtoAtual'
+                  AND status = 'ativa'
+                  AND data_compra <= '$dataCotacaoAtual'
+                  ORDER BY data_compra DESC 
+                  LIMIT 1";
+} else {
+    $cliente_id = $_SESSION['cliente_id'];
+
+    $sqlCompra = "SELECT * FROM compras 
+                  WHERE produto = '$produtoAtual'
+                  AND status = 'ativa'
+                  AND cliente_id = '$cliente_id'
+                  AND data_compra <= '$dataCotacaoAtual'
+                  ORDER BY data_compra DESC 
+                  LIMIT 1";
+}
 
         $resultadoCompra = $conn->query($sqlCompra);
 
@@ -293,7 +420,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
         }
 
         echo "<td>" . $linha['origem'] . "</td>";
-        echo "<td>" . $linha['data_pagamento'] . "</td>";
+        echo "<td>" . $linha['pagamento'] . "</td>";
         echo "<td>" . $linha['data_cotacao'] . "</td>";
         echo "<td>";
 

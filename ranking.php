@@ -1,4 +1,7 @@
-<?php include 'conexao.php'; ?>
+<?php
+include 'verifica_login.php';
+include 'conexao.php';
+?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -28,8 +31,14 @@
     <?php
     $produtoBusca = isset($_GET['produto']) ? trim($_GET['produto']) : '';
 
-    if ($produtoBusca != '') {
-        echo "<h2>Produto analisado: " . $produtoBusca . "</h2>";
+    if ($_SESSION['usuario_tipo'] == 'admin') {
+    $filtroClienteCotacoes = "";
+    $filtroClienteCompras = "AND status = 'ativa'";
+} else {
+    $cliente_id = $_SESSION['cliente_id'];
+    $filtroClienteCotacoes = "AND cliente_id = '$cliente_id'";
+    $filtroClienteCompras = "AND status = 'ativa' AND cliente_id = '$cliente_id'";
+}
 
         $sqlRanking = "
             SELECT 
@@ -47,6 +56,7 @@
                     0 AS qtd_compras
                 FROM cotacoes
                 WHERE TRIM(LOWER(produto)) = TRIM(LOWER('$produtoBusca'))
+                 $filtroClienteCotacoes
                 GROUP BY fornecedor
 
                 UNION ALL
@@ -59,6 +69,7 @@
                     COUNT(*) AS qtd_compras
                 FROM compras
                 WHERE TRIM(LOWER(produto)) = TRIM(LOWER('$produtoBusca'))
+                $filtroClienteCompras
                 GROUP BY fornecedor
             ) base
             GROUP BY fornecedor
