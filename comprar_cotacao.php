@@ -11,10 +11,10 @@ $id = intval($_POST['id']);
 
 $sql = "
 INSERT INTO compras 
-(produto, fornecedor, preco_pago, quantidade, data_compra, cotacao_id, status)
+(produto, fornecedor, preco_pago, quantidade, data_compra, cotacao_id, status, cliente_id)
 
 SELECT 
-produto, fornecedor, preco, quantidade, CURDATE(), id, 'ativa'
+produto, fornecedor, preco, quantidade, CURDATE(), id, 'ativa', cliente_id
 FROM cotacoes
 WHERE id = $id
 

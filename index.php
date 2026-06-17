@@ -50,6 +50,7 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
 
 <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
     <a href="cadastro.php" class="botao-exportar">Cadastrar Usuário</a>
+    <a href="clientes.php" class="botao-exportar">Clientes</a>
 <?php } ?>
 
 <h2>Menor Preço por Produto</h2>
@@ -140,15 +141,33 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
 <h2>Nova Cotação</h2>
 
 <form action="salvar.php" method="POST">
+
+    <select name="cliente_id" required>
+    <option value="">Selecione o cliente</option>
+
+    <?php
+    $sqlClientes = "SELECT * FROM clientes ORDER BY nome_empresa ASC";
+    $resultadoClientes = $conn->query($sqlClientes);
+
+    while ($cliente = $resultadoClientes->fetch_assoc()) {
+        echo "<option value='" . $cliente['id'] . "'>" . $cliente['nome_empresa'] . "</option>";
+    }
+    ?>
+</select>
     <input type="text" name="cotacao" placeholder="Nome/Nº da Cotação" required>
     <input type="text" name="produto" placeholder="Produto" required>
     <input type="text" name="fornecedor" placeholder="Fornecedor" required>
     <input type="number" step="0.01" name="preco" placeholder="Preço R$" required>
     <input type="text" name="origem" placeholder="Origem">
-    <input type="number" name="data_pagamento" placeholder="Data do Pagamento">
+    <div class="campo">
+    <label>Data do Pagamento</label>
+    <input type="date" name="data_pagamento">
+</div>
     <input type="text" name="quantidade" placeholder="Quantidade">
-    <input type="date" name="data_cotacao" required>
-
+    <div class="campo">
+        <label>Data da Cotação</label>
+        <input type="date" name="data_cotacao" required>
+    </div>
     <button type="submit">Salvar Cotação</button>
 </form>
 <?php } ?>
@@ -182,6 +201,8 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     <?php
     $busca = isset($_GET['busca']) ? $_GET['busca'] : '';
 
+    if ($_SESSION['usuario_tipo'] == 'admin') {
+
     if ($busca != '') {
         $sql = "SELECT * FROM cotacoes 
                 WHERE produto LIKE '%$busca%' 
@@ -191,6 +212,27 @@ $totalCompras = $conn->query("SELECT COUNT(*) as total FROM compras WHERE status
     } else {
         $sql = "SELECT * FROM cotacoes ORDER BY criado_em DESC";
     }
+
+} else {
+
+    $cliente_id = $_SESSION['cliente_id'];
+
+    if ($busca != '') {
+        $sql = "SELECT * FROM cotacoes 
+                WHERE cliente_id = '$cliente_id'
+                AND (
+                    produto LIKE '%$busca%' 
+                    OR fornecedor LIKE '%$busca%'
+                    OR cotacao LIKE '%$busca%'
+                )
+                ORDER BY criado_em DESC";
+    } else {
+        $sql = "SELECT * FROM cotacoes 
+                WHERE cliente_id = '$cliente_id'
+                ORDER BY criado_em DESC";
+    }
+
+}
 
     $resultado = $conn->query($sql);
 

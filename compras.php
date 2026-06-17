@@ -29,8 +29,17 @@ include 'conexao.php';
         </tr>
 
         <?php
-        $sql = "SELECT * FROM compras ORDER BY data_compra DESC";
-        $resultado = $conn->query($sql);
+        if ($_SESSION['usuario_tipo'] == 'admin') {
+    $sql = "SELECT * FROM compras ORDER BY data_compra DESC";
+} else {
+    $cliente_id = $_SESSION['cliente_id'];
+
+    $sql = "SELECT * FROM compras 
+            WHERE cliente_id = '$cliente_id'
+            ORDER BY data_compra DESC";
+}
+
+$resultado = $conn->query($sql);
 
         while ($linha = $resultado->fetch_assoc()) {
             if ($linha['status'] == 'cancelada') {

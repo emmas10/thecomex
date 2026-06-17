@@ -9,9 +9,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'];
     $senha = md5($_POST['senha']);
     $tipo = 'visualizacao';
+    $cliente_id = $_POST['cliente_id'];
 
-    $sql = "INSERT INTO usuarios (nome, email, senha, tipo)
-            VALUES ('$nome', '$email', '$senha', '$tipo')";
+    $sql = "INSERT INTO usuarios (nome, email, senha, tipo, cliente_id)
+            VALUES ('$nome', '$email', '$senha', '$tipo', '$cliente_id')";
 
     if ($conn->query($sql) === TRUE) {
         $mensagem = "Usuário cadastrado com sucesso!";
@@ -39,7 +40,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <input type="text" name="nome" placeholder="Nome" required>
         <input type="email" name="email" placeholder="E-mail" required>
         <input type="password" name="senha" placeholder="Senha" required>
+        <select name="cliente_id" required>
+    <option value="">Selecione o cliente</option>
 
+    <?php
+    $sqlClientes = "SELECT * FROM clientes ORDER BY nome_empresa ASC";
+    $resultadoClientes = $conn->query($sqlClientes);
+
+    while ($cliente = $resultadoClientes->fetch_assoc()) {
+        echo "<option value='" . $cliente['id'] . "'>" . $cliente['nome_empresa'] . "</option>";
+    }
+    ?>
+</select>
 
         <button type="submit">Cadastrar Usuário</button>
         <p style="margin-top:15px;">

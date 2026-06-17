@@ -6,7 +6,7 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
     echo "Acesso negado.";
     exit;
 }
-include 'conexao.php';
+$cliente_id = $_SESSION['cliente_id'];
 $cotacao = $_POST['cotacao'];
 $produto = $_POST['produto'];
 $fornecedor = $_POST['fornecedor'];
@@ -17,9 +17,9 @@ $quantidade = $_POST['quantidade'];
 $data_cotacao = $_POST['data_cotacao'];
 
 $sql = "INSERT INTO cotacoes 
-(cotacao, produto, fornecedor, preco, origem, data_pagamento, quantidade, data_cotacao)
+(cliente_id, cotacao, produto, fornecedor, preco, origem, pagamento, quantidade, data_cotacao,)
 VALUES 
-('$cotacao', '$produto', '$fornecedor', '$preco', '$origem', '$data_pagamento', '$quantidade', '$data_cotacao')";
+('$cliente_id', '$cotacao', '$produto', '$fornecedor', '$preco', '$origem', '$data_pagamento', '$quantidade', '$data_cotacao')";
 
 if ($conn->query($sql) === TRUE) {
     header("Location: index.php");
