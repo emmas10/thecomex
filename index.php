@@ -74,20 +74,28 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
         <p><?php echo $totalCompras; ?></p>
     </div>
 </div>
-<a href="ranking.php" class="botao-exportar">
-    Ranking de Fornecedores
-</a>
+<div class="menu-sistema">
 
+    <a href="index.php">🏠 Início</a>
+
+    <a href="ranking.php">📊 Ranking de Fornecedores</a>
+
+    <a href="compras.php">🛒 Histórico de Compras</a>
+    <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
+    <a href="auditoria.php">📋 Auditoria</a>
+    <a href="usuarios.php">👥 Usuários</a>
+<?php } ?>
+
+    <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
+        <a href="clientes.php">👥 Clientes</a>
+        <a href="cadastro.php">👤 Cadastrar Usuário</a>
+    <?php } ?>
+
+    <a href="logout.php">🚪 Sair</a>
 <p>
     Logado como: <strong><?php echo $_SESSION['usuario_nome']; ?></strong>
-    | Perfil: <strong><?php echo $_SESSION['usuario_tipo']; ?></strong>
-    | <a href="logout.php">Sair</a>
 </p>
-
-<?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
-    <a href="cadastro.php" class="botao-exportar">Cadastrar Usuário</a>
-    <a href="clientes.php" class="botao-exportar">Clientes</a>
-<?php } ?>
+</div>
 
 <h2>Menor Preço por Produto</h2>
 
@@ -253,7 +261,7 @@ $sqlProdutos = "
     >
     <button type="submit">Buscar</button>
 </form>
-
+<div class="tabela-scroll"></div>
 <table>
     <tr>
 
@@ -272,6 +280,7 @@ $sqlProdutos = "
 <th>Data do Pagamento</th>
 <th>Data</th>
 <th>Ação</th>
+</th>
 
 </tr>
 
@@ -367,15 +376,18 @@ echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
 echo "<td>" . $linha['cotacao'] . "</td>";
 echo "<td>" . $linha['produto'] . "</td>";
 echo "<td>" . $linha['fornecedor'] . "</td>";
-echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
+echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . 
+"</td>";
+"</td>";
 
        if ($_SESSION['usuario_tipo'] == 'admin') {
-    $sqlCompra = "SELECT * FROM compras 
-                  WHERE produto = '$produtoAtual'
-                  AND status = 'ativa'
-                  AND data_compra <= '$dataCotacaoAtual'
-                  ORDER BY data_compra DESC 
-                  LIMIT 1";
+    $idCotacaoAtual = $linha['id'];
+
+$sqlCompra = "SELECT *
+              FROM compras
+              WHERE cotacao_id = '$idCotacaoAtual'
+              AND status = 'ativa'
+              LIMIT 1";
 } else {
     $cliente_id = $_SESSION['cliente_id'];
 
@@ -418,10 +430,11 @@ echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
             echo "<td>Sem histórico</td>";
             echo "<td>-</td>";
         }
-
         echo "<td>" . $linha['origem'] . "</td>";
-        echo "<td>" . $linha['pagamento'] . "</td>";
-        echo "<td>" . $linha['data_cotacao'] . "</td>";
+echo "<td>" . $linha['pagamento'] . "</td>";
+echo "<td>" . $linha['data_cotacao'] . "</td>";
+
+echo "<td>";
         echo "<td>";
 
 echo "<td>";
@@ -468,7 +481,7 @@ echo "</tr>";
     }
     ?>
 </table>
-
+</div>
 </div>
 
 </body>

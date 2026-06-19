@@ -31,14 +31,18 @@ include 'conexao.php';
     <?php
     $produtoBusca = isset($_GET['produto']) ? trim($_GET['produto']) : '';
 
-    if ($_SESSION['usuario_tipo'] == 'admin') {
-    $filtroClienteCotacoes = "";
-    $filtroClienteCompras = "AND status = 'ativa'";
-} else {
-    $cliente_id = $_SESSION['cliente_id'];
-    $filtroClienteCotacoes = "AND cliente_id = '$cliente_id'";
-    $filtroClienteCompras = "AND status = 'ativa' AND cliente_id = '$cliente_id'";
-}
+    if ($produtoBusca != '') {
+
+        echo "<h2>Produto analisado: " . $produtoBusca . "</h2>";
+
+        if ($_SESSION['usuario_tipo'] == 'admin') {
+            $filtroClienteCotacoes = "";
+            $filtroClienteCompras = "AND status = 'ativa'";
+        } else {
+            $cliente_id = $_SESSION['cliente_id'];
+            $filtroClienteCotacoes = "AND cliente_id = '$cliente_id'";
+            $filtroClienteCompras = "AND status = 'ativa' AND cliente_id = '$cliente_id'";
+        }
 
         $sqlRanking = "
             SELECT 
@@ -56,7 +60,7 @@ include 'conexao.php';
                     0 AS qtd_compras
                 FROM cotacoes
                 WHERE TRIM(LOWER(produto)) = TRIM(LOWER('$produtoBusca'))
-                 $filtroClienteCotacoes
+                $filtroClienteCotacoes
                 GROUP BY fornecedor
 
                 UNION ALL
@@ -73,8 +77,7 @@ include 'conexao.php';
                 GROUP BY fornecedor
             ) base
             GROUP BY fornecedor
-            ORDER BY 
-                COALESCE(menor_preco_comprado, menor_preco_cotado) ASC
+            ORDER BY COALESCE(menor_preco_comprado, menor_preco_cotado) ASC
         ";
 
         $resultadoRanking = $conn->query($sqlRanking);
@@ -114,6 +117,7 @@ include 'conexao.php';
         } else {
             echo "<p>Nenhum dado encontrado para esse produto.</p>";
         }
+
     } else {
         echo "<p>Digite um produto para ver o ranking de fornecedores.</p>";
     }

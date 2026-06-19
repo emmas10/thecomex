@@ -21,6 +21,7 @@ include 'conexao.php';
         <tr>
             <th>Produto</th>
             <th>Fornecedor</th>
+            <th>Quem Comprou</th>
             <th>Preço Pago</th>
             <th>Quantidade</th>
             <th>Data</th>
@@ -29,14 +30,19 @@ include 'conexao.php';
         </tr>
 
         <?php
-        if ($_SESSION['usuario_tipo'] == 'admin') {
-    $sql = "SELECT * FROM compras ORDER BY data_compra DESC";
+       if ($_SESSION['usuario_tipo'] == 'admin') {
+    $sql = "SELECT compras.*, usuarios.nome AS usuario_nome
+            FROM compras
+            LEFT JOIN usuarios ON compras.usuario_id = usuarios.id
+            ORDER BY compras.data_compra DESC";
 } else {
     $cliente_id = $_SESSION['cliente_id'];
 
-    $sql = "SELECT * FROM compras 
-            WHERE cliente_id = '$cliente_id'
-            ORDER BY data_compra DESC";
+    $sql = "SELECT compras.*, usuarios.nome AS usuario_nome
+            FROM compras
+            LEFT JOIN usuarios ON compras.usuario_id = usuarios.id
+            WHERE compras.cliente_id = '$cliente_id'
+            ORDER BY compras.data_compra DESC";
 }
 
 $resultado = $conn->query($sql);
@@ -50,6 +56,7 @@ $resultado = $conn->query($sql);
 
             echo "<td>" . $linha['produto'] . "</td>";
             echo "<td>" . $linha['fornecedor'] . "</td>";
+            echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
             echo "<td>R$ " . number_format($linha['preco_pago'], 2, ',', '.') . "</td>";
             echo "<td>" . $linha['quantidade'] . "</td>";
             echo "<td>" . $linha['data_compra'] . "</td>";

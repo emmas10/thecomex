@@ -98,3 +98,22 @@ td {
     margin-top:10px;
     font-weight:bold;
 }
+.menu-sistema {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+
+.menu-sistema a {
+    background: #1f3b5f;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.menu-sistema a:hover {
+    background: #2d5689;
+}
