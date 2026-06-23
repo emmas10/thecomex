@@ -211,7 +211,36 @@ $sqlProdutos = "
     GROUP BY produtos.produto_base
     ORDER BY produtos.produto_base ASC
 ";
+}
 
+$resultadoProdutos = $conn->query($sqlProdutos);
+
+if (!$resultadoProdutos) {
+    echo "<tr><td colspan='5'>Erro no SQL: " . $conn->error . "</td></tr>";
+} elseif ($resultadoProdutos->num_rows == 0) {
+    echo "<tr><td colspan='5'>Nenhum produto encontrado.</td></tr>";
+} else {
+    while ($produto = $resultadoProdutos->fetch_assoc()) {
+        echo "<tr>";
+        echo "<td>" . ucfirst($produto['produto_base']) . "</td>";
+        echo "<td>" . ($produto['fornecedor_cotado'] ?? 'Sem cotação') . "</td>";
+
+        if ($produto['menor_preco_cotado'] !== null) {
+            echo "<td>R$ " . number_format($produto['menor_preco_cotado'], 2, ',', '.') . "</td>";
+        } else {
+            echo "<td>-</td>";
+        }
+
+        echo "<td>" . ($produto['fornecedor_comprado'] ?? 'Sem compra') . "</td>";
+
+        if ($produto['menor_preco_comprado'] !== null) {
+            echo "<td>R$ " . number_format($produto['menor_preco_comprado'], 2, ',', '.') . "</td>";
+        } else {
+            echo "<td>-</td>";
+        }
+
+        echo "</tr>";
+    }
 }
 ?>
 </table>
@@ -269,11 +298,13 @@ $sqlProdutos = "
     <th>Empresa</th>
 <?php } ?>
 
-<th>Quem Cotou</th>
-<th>Cotação</th>
+<?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
+    <th>Quem Cotou</th>
+    <th>Cotação</th>
+<?php } ?>
 <th>Produto</th>
-<th>Fornecedor</th>
 <th>Preço Cotado</th>
+<th>Fornecedor</th>
 <th>Última Compra</th>
 <th>Diferença</th>
 <th>Origem</th>
@@ -298,13 +329,13 @@ $sqlProdutos = "
                 OR cotacoes.fornecedor LIKE '%$busca%'
                 OR cotacoes.cotacao LIKE '%$busca%'
                 OR clientes.nome_empresa LIKE '%$busca%'
-                ORDER BY cotacoes.criado_em DESC";
+                ORDER BY cotacoes.preco ASC";
     } else {
         $sql = "SELECT cotacoes.*, clientes.nome_empresa, usuarios.nome AS usuario_nome
                 FROM cotacoes 
                 LEFT JOIN clientes ON cotacoes.cliente_id = clientes.id
                 LEFT JOIN usuarios ON cotacoes.usuario_id = usuarios.id
-                ORDER BY cotacoes.criado_em DESC";
+                ORDER BY cotacoes.preco ASC";
     }
 
 } else {
@@ -323,7 +354,7 @@ $sqlProdutos = "
                     OR cotacoes.cotacao LIKE '%$busca%'
                     OR usuarios.nome LIKE '%$busca%'
                 )
-                ORDER BY cotacoes.criado_em DESC";
+                ORDER BY cotacoes.preco ASC";
 
     } else {
 
@@ -331,7 +362,7 @@ $sqlProdutos = "
                 FROM cotacoes
                 LEFT JOIN usuarios ON cotacoes.usuario_id = usuarios.id
                 WHERE cotacoes.cliente_id = '$cliente_id'
-                ORDER BY cotacoes.criado_em DESC";
+                ORDER BY cotacoes.preco ASC";
 
     }
 
@@ -363,7 +394,7 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 $resultadoMenor = $conn->query($sqlMenor);
 $menor = $resultadoMenor->fetch_assoc()['menor_preco'];
         if ($linha['preco'] == $menor) {
-            echo "<tr style='background-color: #d4edda; font-weight: bold;'>";
+            echo "<tr style='background-color: #7CFC00; font-weight: bold;'>";
         } else {
             echo "<tr>";
         }
@@ -372,11 +403,13 @@ $menor = $resultadoMenor->fetch_assoc()['menor_preco'];
     echo "<td>" . $linha['nome_empresa'] . "</td>";
 }
 
-echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
-echo "<td>" . $linha['cotacao'] . "</td>";
+if ($_SESSION['usuario_tipo'] == 'admin') {
+    echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
+    echo "<td>" . $linha['cotacao'] . "</td>";
+}
 echo "<td>" . $linha['produto'] . "</td>";
+echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
 echo "<td>" . $linha['fornecedor'] . "</td>";
-echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . 
 "</td>";
 "</td>";
 
