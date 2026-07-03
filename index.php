@@ -494,18 +494,22 @@ echo "<td>" . $linha['data_cotacao'] . "</td>";
 
 echo "<td>";
 
+$idCotacao = intval($linha['id']);
+$stmtComprada = $conn->prepare(
+    "SELECT id
+     FROM compras
+     WHERE cotacao_id = ?
+     AND status = 'ativa'
+     LIMIT 1"
+);
+$stmtComprada->bind_param("i", $idCotacao);
+$stmtComprada->execute();
+$resultadoComprada = $stmtComprada->get_result();
+$cotacaoComprada = ($resultadoComprada && $resultadoComprada->num_rows > 0);
+
 if ($_SESSION['usuario_tipo'] == 'admin') {
 
-    $idCotacao = $linha['id'];
-
-    $sqlComprada = "SELECT * FROM compras
-                    WHERE cotacao_id = $idCotacao
-                    AND status = 'ativa'
-                    LIMIT 1";
-
-    $resultadoComprada = $conn->query($sqlComprada);
-
-    if ($resultadoComprada->num_rows > 0) {
+    if ($cotacaoComprada) {
         $compra = $resultadoComprada->fetch_assoc();
 
         echo "<strong style='color:green;'>Já comprada</strong><br>";
@@ -517,20 +521,30 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 
     } else {
 
+        echo "<a href='gerar_email_pedido.php?id=" . htmlspecialchars((string) $idCotacao, ENT_QUOTES, 'UTF-8') . "' target='_blank'>";
+        echo "<button type='button'> Gerar Pedido por E-mail</button>";
+        echo "</a>";
+
         echo "<form action='comprar_cotacao.php' method='POST'>";
-        echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
+        echo "<input type='hidden' name='id' value='" . htmlspecialchars((string) $idCotacao, ENT_QUOTES, 'UTF-8') . "'>";
         echo "<button type='submit'>Comprar Cotação</button>";
         echo "</form>";
     }
 
     echo "<form action='excluir_cotacao.php' method='POST'>";
-    echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
+    echo "<input type='hidden' name='id' value='" . htmlspecialchars((string) $idCotacao, ENT_QUOTES, 'UTF-8') . "'>";
     echo "<button type='submit'>Excluir Cotação</button>";
     echo "</form>";
 
 } else {
 
-    echo "Somente visualização";
+    if (!$cotacaoComprada) {
+        echo "<a href='gerar_email_pedido.php?id=" . htmlspecialchars((string) $idCotacao, ENT_QUOTES, 'UTF-8') . "' target='_blank'>";
+        echo "<button type='button'> Gerar Pedido por E-mail</button>";
+        echo "</a>";
+    } else {
+        echo "Cotação já comprada";
+    }
 
 }
 
