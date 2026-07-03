@@ -5,19 +5,19 @@ include 'conexao.php';
 $mensagem = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nome = $_POST['nome'];
-    $email = $_POST['email'];
-    $senha = md5($_POST['senha']);
+    $nome = trim($_POST['nome']);
+    $email = trim($_POST['email']);
+    $senha = password_hash($_POST['senha'], PASSWORD_DEFAULT);
     $tipo = 'visualizacao';
-    $cliente_id = $_POST['cliente_id'];
+    $cliente_id = intval($_POST['cliente_id']);
 
-    $sql = "INSERT INTO usuarios (nome, email, senha, tipo, cliente_id)
-            VALUES ('$nome', '$email', '$senha', '$tipo', '$cliente_id')";
+    $stmt = $conn->prepare("INSERT INTO usuarios (nome, email, senha, tipo, cliente_id) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssi", $nome, $email, $senha, $tipo, $cliente_id);
 
-    if ($conn->query($sql) === TRUE) {
+    if ($stmt->execute()) {
         $mensagem = "Usuário cadastrado com sucesso!";
     } else {
-        $mensagem = "Erro: " . $conn->error;
+        $mensagem = "Erro ao cadastrar usuário.";
     }
 }
 ?>
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="container">
     <h1>Cadastro de Usuários</h1>
 
-    <?php if ($mensagem != '') { echo "<p>$mensagem</p>"; } ?>
+    <?php if ($mensagem != '') { echo "<p>" . htmlspecialchars($mensagem, ENT_QUOTES, 'UTF-8') . "</p>"; } ?>
 
     <form method="POST">
         <input type="text" name="nome" placeholder="Nome" required>
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $resultadoClientes = $conn->query($sqlClientes);
 
     while ($cliente = $resultadoClientes->fetch_assoc()) {
-        echo "<option value='" . $cliente['id'] . "'>" . $cliente['nome_empresa'] . "</option>";
+        echo "<option value='" . intval($cliente['id']) . "'>" . htmlspecialchars($cliente['nome_empresa'], ENT_QUOTES, 'UTF-8') . "</option>";
     }
     ?>
 </select>

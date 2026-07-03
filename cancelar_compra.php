@@ -7,11 +7,11 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
     exit;
 }
 
-$id = $_POST['id'];
+$id = intval($_POST['id']);
 
-$sql = "UPDATE compras SET status = 'cancelada' WHERE id = $id";
-
-$conn->query($sql);
+$stmt = $conn->prepare("UPDATE compras SET status = 'cancelada' WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
 
 header("Location: compras.php");
 exit;

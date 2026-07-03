@@ -76,22 +76,24 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 </div>
 <div class="menu-sistema">
 
-    <a href="index.php">🏠 Início</a>
+    <a href="index.php"> Início</a>
 
-    <a href="ranking.php">📊 Ranking de Fornecedores</a>
+    <a href="ranking.php"> Ranking de Fornecedores</a>
 
-    <a href="compras.php">🛒 Histórico de Compras</a>
+    <a href="compras.php"> Histórico de Compras</a>
     <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
-    <a href="auditoria.php">📋 Auditoria</a>
-    <a href="usuarios.php">👥 Usuários</a>
+    <a href="auditoria.php"> Auditoria</a>
+    <a href="usuarios.php"> Usuários</a>
 <?php } ?>
 
     <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
-        <a href="clientes.php">👥 Clientes</a>
-        <a href="cadastro.php">👤 Cadastrar Usuário</a>
+        <a href="clientes.php"> Clientes</a>
+        <a href="cadastro.php"> Cadastrar Usuário</a>
     <?php } ?>
 
-    <a href="logout.php">🚪 Sair</a>
+    <a href="relatorios.php"> Relatórios PDF</a>
+
+    <a href="logout.php"> Sair</a>
 <p>
     Logado como: <strong><?php echo $_SESSION['usuario_nome']; ?></strong>
 </p>
@@ -410,65 +412,85 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 echo "<td>" . $linha['produto'] . "</td>";
 echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
 echo "<td>" . $linha['fornecedor'] . "</td>";
-"</td>";
-"</td>";
 
-       if ($_SESSION['usuario_tipo'] == 'admin') {
-    $idCotacaoAtual = $linha['id'];
 
-$sqlCompra = "SELECT *
-              FROM compras
-              WHERE cotacao_id = '$idCotacaoAtual'
-              AND status = 'ativa'
-              LIMIT 1";
+      $clienteCotacao = intval($linha['cliente_id']);
+      $idCotacaoAtual = intval($linha['id']);
+
+$stmtCompra = $conn->prepare(
+    "SELECT compras.*
+     FROM compras
+     LEFT JOIN cotacoes cotacao_compra
+     ON compras.cotacao_id = cotacao_compra.id
+     WHERE TRIM(LOWER(compras.produto)) = TRIM(LOWER(?))
+     AND compras.status = 'ativa'
+     AND compras.cliente_id = ?
+     AND (compras.cotacao_id IS NULL OR compras.cotacao_id <> ?)
+     AND (
+        (
+            compras.cotacao_id IS NOT NULL
+            AND cotacao_compra.cliente_id = ?
+            AND TRIM(LOWER(cotacao_compra.produto)) = TRIM(LOWER(?))
+            AND (
+                cotacao_compra.data_cotacao < ?
+                OR (
+                    cotacao_compra.data_cotacao = ?
+                    AND cotacao_compra.id < ?
+                )
+            )
+        )
+        OR (
+            compras.cotacao_id IS NULL
+            AND compras.data_compra <= ?
+        )
+     )
+     ORDER BY
+        COALESCE(cotacao_compra.data_cotacao, compras.data_compra) DESC,
+        COALESCE(cotacao_compra.id, 0) DESC,
+        compras.data_compra DESC,
+        compras.id DESC
+     LIMIT 1"
+);
+$stmtCompra->bind_param(
+    "siiisssis",
+    $produtoAtual,
+    $clienteCotacao,
+    $idCotacaoAtual,
+    $clienteCotacao,
+    $produtoAtual,
+    $dataCotacaoAtual,
+    $dataCotacaoAtual,
+    $idCotacaoAtual,
+    $dataCotacaoAtual
+);
+$stmtCompra->execute();
+$resultadoCompra = $stmtCompra->get_result();
+
+if ($resultadoCompra && $resultadoCompra->num_rows > 0) {
+    $compra = $resultadoCompra->fetch_assoc();
+    $precoPago = floatval($compra['preco_pago']);
+    $precoAtual = floatval($linha['preco']);
+
+    $valorDiferenca = $precoAtual - $precoPago;
+    $diferenca = ($precoPago != 0) ? ($valorDiferenca / $precoPago) * 100 : 0;
+
+    echo "<td>R$ " . number_format($precoPago, 2, ',', '.') . "</td>";
+
+    if ($valorDiferenca < 0) {
+        echo "<td style='color:green;font-weight:bold;'>Economia<br>" . number_format(abs($diferenca), 2, ',', '.') . "%<br>R$ " . number_format(abs($valorDiferenca), 2, ',', '.') . "</td>";
+    } elseif ($valorDiferenca > 0) {
+        echo "<td style='color:red;font-weight:bold;'>Aumento<br>" . number_format($diferenca, 2, ',', '.') . "%<br>R$ " . number_format($valorDiferenca, 2, ',', '.') . "</td>";
+    } else {
+        echo "<td style='font-weight:bold;'>➖ Mesmo preço</td>";
+    }
 } else {
-    $cliente_id = $_SESSION['cliente_id'];
-
-    $sqlCompra = "SELECT * FROM compras 
-                  WHERE produto = '$produtoAtual'
-                  AND status = 'ativa'
-                  AND cliente_id = '$cliente_id'
-                  AND data_compra <= '$dataCotacaoAtual'
-                  ORDER BY data_compra DESC 
-                  LIMIT 1";
+    echo "<td>Sem histórico</td>";
+    echo "<td>-</td>";
 }
 
-        $resultadoCompra = $conn->query($sqlCompra);
-
-        if ($resultadoCompra->num_rows > 0) {
-            $compra = $resultadoCompra->fetch_assoc();
-            $precoPago = $compra['preco_pago'];
-
-            $valorDiferenca = $linha['preco'] - $precoPago;
-            $diferenca = ($valorDiferenca / $precoPago) * 100;
-
-            echo "<td>R$ " . number_format($precoPago, 2, ',', '.') . "</td>";
-
-            if ($valorDiferenca < 0) {
-                echo "<td style='color:green;font-weight:bold;'>
-                         Economia<br>
-                        " . number_format(abs($diferenca), 2, ',', '.') . "%<br>
-                        R$ " . number_format(abs($valorDiferenca), 2, ',', '.') . "
-                      </td>";
-            } elseif ($valorDiferenca > 0) {
-                echo "<td style='color:red;font-weight:bold;'>
-                         Aumento<br>
-                        " . number_format($diferenca, 2, ',', '.') . "%<br>
-                        R$ " . number_format($valorDiferenca, 2, ',', '.') . "
-                      </td>";
-            } else {
-                echo "<td style='font-weight:bold;'>➖ Mesmo preço</td>";
-            }
-        } else {
-            echo "<td>Sem histórico</td>";
-            echo "<td>-</td>";
-        }
-        echo "<td>" . $linha['origem'] . "</td>";
+echo "<td>" . $linha['origem'] . "</td>";
 echo "<td>" . $linha['pagamento'] . "</td>";
 echo "<td>" . $linha['data_cotacao'] . "</td>";
-
-echo "<td>";
-        echo "<td>";
 
 echo "<td>";
 
@@ -476,8 +498,11 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 
     $idCotacao = $linha['id'];
 
+    $sqlComprada = "SELECT * FROM compras
+                    WHERE cotacao_id = $idCotacao
+                    AND status = 'ativa'
+                    LIMIT 1";
 
-    $sqlComprada = "SELECT * FROM compras WHERE cotacao_id = $idCotacao AND status = 'ativa' LIMIT 1";
     $resultadoComprada = $conn->query($sqlComprada);
 
     if ($resultadoComprada->num_rows > 0) {
@@ -485,27 +510,28 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 
         echo "<strong style='color:green;'>Já comprada</strong><br>";
 
-        echo "<form action='excluir_compra.php' method='POST' style='display:inline;'>";
+        echo "<form action='excluir_compra.php' method='POST'>";
         echo "<input type='hidden' name='id' value='" . $compra['id'] . "'>";
-        echo "<button type='submit' onclick=\"return confirm('Deseja cancelar esta compra?')\">Excluir Compra</button>";
+        echo "<button type='submit'>Excluir Compra</button>";
         echo "</form>";
 
     } else {
-        echo "<form action='comprar_cotacao.php' method='POST' style='display:inline;'>";
+
+        echo "<form action='comprar_cotacao.php' method='POST'>";
         echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
-        echo "<button type='submit' onclick='this.disabled=true; this.form.submit();'>Comprar Cotação</button>";
+        echo "<button type='submit'>Comprar Cotação</button>";
         echo "</form>";
     }
 
-    echo " ";
-
-    echo "<form action='excluir_cotacao.php' method='POST' style='display:inline;'>";
+    echo "<form action='excluir_cotacao.php' method='POST'>";
     echo "<input type='hidden' name='id' value='" . $linha['id'] . "'>";
-    echo "<button type='submit' onclick=\"return confirm('Deseja excluir esta cotação?')\">Excluir Cotação</button>";
+    echo "<button type='submit'>Excluir Cotação</button>";
     echo "</form>";
 
 } else {
+
     echo "Somente visualização";
+
 }
 
 echo "</td>";

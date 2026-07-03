@@ -7,24 +7,31 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
     exit;
 }
 
-$id = $_GET['id'];
+$id = intval($_GET['id']);
 
-$sql = "SELECT * FROM usuarios WHERE id = $id";
-$resultado = $conn->query($sql);
+$stmt = $conn->prepare("SELECT * FROM usuarios WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$resultado = $stmt->get_result();
 $usuario = $resultado->fetch_assoc();
 
+if (!$usuario) {
+    echo "Usuário não encontrado.";
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nome = $_POST['nome'];
-    $email = $_POST['email'];
-    $cliente_id = $_POST['cliente_id'];
+    $nome = trim($_POST['nome']);
+    $email = trim($_POST['email']);
+    $cliente_id = intval($_POST['cliente_id']);
 
-    $sqlUpdate = "UPDATE usuarios 
-                  SET nome = '$nome',
-                      email = '$email',
-                      cliente_id = '$cliente_id'
-                  WHERE id = $id";
-
-    $conn->query($sqlUpdate);
+    $stmtUpdate = $conn->prepare(
+        "UPDATE usuarios
+        SET nome = ?, email = ?, cliente_id = ?
+        WHERE id = ?"
+    );
+    $stmtUpdate->bind_param("ssii", $nome, $email, $cliente_id, $id);
+    $stmtUpdate->execute();
 
     header("Location: usuarios.php");
     exit;
@@ -47,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <a href="usuarios.php" class="botao-exportar">Voltar</a>
 
 <form method="POST">
-    <input type="text" name="nome" value="<?php echo $usuario['nome']; ?>" required>
-    <input type="email" name="email" value="<?php echo $usuario['email']; ?>" required>
+    <input type="text" name="nome" value="<?php echo htmlspecialchars($usuario['nome'], ENT_QUOTES, 'UTF-8'); ?>" required>
+    <input type="email" name="email" value="<?php echo htmlspecialchars($usuario['email'], ENT_QUOTES, 'UTF-8'); ?>" required>
 
     <select name="cliente_id" required>
         <option value="">Selecione o cliente</option>
@@ -59,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         while ($cliente = $resultadoClientes->fetch_assoc()) {
             $selecionado = ($cliente['id'] == $usuario['cliente_id']) ? "selected" : "";
-            echo "<option value='" . $cliente['id'] . "' $selecionado>" . $cliente['nome_empresa'] . "</option>";
+            echo "<option value='" . intval($cliente['id']) . "' $selecionado>" . htmlspecialchars($cliente['nome_empresa'], ENT_QUOTES, 'UTF-8') . "</option>";
         }
         ?>
     </select>
