@@ -40,10 +40,10 @@ while ($linha = $resultado->fetch_assoc()) {
 
     echo "<tr>";
 
-    echo "<td>" . $linha['usuario_nome'] . "</td>";
-    echo "<td>" . $linha['tipo_acao'] . "</td>";
-    echo "<td>" . $linha['descricao'] . "</td>";
-    echo "<td>" . $linha['criado_em'] . "</td>";
+    echo "<td>" . htmlspecialchars($linha['usuario_nome'], ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['tipo_acao'], ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['descricao'], ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['criado_em'], ENT_QUOTES, 'UTF-8') . "</td>";
 
     echo "</tr>";
 }

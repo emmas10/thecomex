@@ -1,13 +1,15 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'registrar_auditoria.php';
 
 if ($_SESSION['usuario_tipo'] != 'admin') {
     echo "Acesso negado.";
     exit;
 }
 
-$id = intval($_GET['id']);
+$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$erro = '';
 
 $stmt = $conn->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->bind_param("i", $id);
@@ -16,25 +18,65 @@ $resultado = $stmt->get_result();
 $usuario = $resultado->fetch_assoc();
 
 if (!$usuario) {
-    echo "Usuário não encontrado.";
+    echo "Usuario nao encontrado.";
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nome = trim($_POST['nome']);
     $email = trim($_POST['email']);
-    $cliente_id = intval($_POST['cliente_id']);
+    $cliente_id = ($_POST['cliente_id'] !== '') ? intval($_POST['cliente_id']) : null;
+    $tipo = $_POST['tipo'] ?? '';
+    $tiposPermitidos = ['admin', 'visualizacao'];
 
-    $stmtUpdate = $conn->prepare(
-        "UPDATE usuarios
-        SET nome = ?, email = ?, cliente_id = ?
-        WHERE id = ?"
-    );
-    $stmtUpdate->bind_param("ssii", $nome, $email, $cliente_id, $id);
-    $stmtUpdate->execute();
+    if (!in_array($tipo, $tiposPermitidos, true)) {
+        $erro = "Tipo de usuario invalido.";
+    } else {
+        $removendoProprioAdmin = (
+            intval($_SESSION['usuario_id']) === $id
+            && $usuario['tipo'] === 'admin'
+            && $tipo !== 'admin'
+        );
 
-    header("Location: usuarios.php");
-    exit;
+        if ($removendoProprioAdmin) {
+            $tipoAdmin = 'admin';
+            $stmtAdmins = $conn->prepare("SELECT COUNT(*) AS total FROM usuarios WHERE tipo = ?");
+            $stmtAdmins->bind_param("s", $tipoAdmin);
+            $stmtAdmins->execute();
+            $totalAdmins = intval($stmtAdmins->get_result()->fetch_assoc()['total']);
+
+            if ($totalAdmins <= 1) {
+                $erro = "Nao e permitido remover seu proprio acesso admin porque voce e o unico administrador do sistema.";
+            }
+        }
+    }
+
+    if ($erro === '') {
+        $tipoAnterior = $usuario['tipo'];
+
+        $stmtUpdate = $conn->prepare(
+            "UPDATE usuarios
+            SET nome = ?, email = ?, cliente_id = ?, tipo = ?
+            WHERE id = ?"
+        );
+        $stmtUpdate->bind_param("ssisi", $nome, $email, $cliente_id, $tipo, $id);
+        $stmtUpdate->execute();
+
+        if ($tipoAnterior !== $tipo) {
+            registrarAuditoria(
+                $conn,
+                'Alteracao de tipo de usuario',
+                'Usuario ID ' . $id . ' teve o tipo alterado de ' . $tipoAnterior . ' para ' . $tipo
+            );
+
+            if (intval($_SESSION['usuario_id']) === $id) {
+                $_SESSION['usuario_tipo'] = $tipo;
+            }
+        }
+
+        header("Location: usuarios.php");
+        exit;
+    }
 }
 ?>
 
@@ -42,23 +84,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Editar Usuário</title>
+    <title>Editar Usuario</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
 
-<h1>Editar Usuário</h1>
+<h1>Editar Usuario</h1>
 
 <a href="usuarios.php" class="botao-exportar">Voltar</a>
+
+<?php if ($erro !== '') { ?>
+    <p><?php echo htmlspecialchars($erro, ENT_QUOTES, 'UTF-8'); ?></p>
+<?php } ?>
 
 <form method="POST">
     <input type="text" name="nome" value="<?php echo htmlspecialchars($usuario['nome'], ENT_QUOTES, 'UTF-8'); ?>" required>
     <input type="email" name="email" value="<?php echo htmlspecialchars($usuario['email'], ENT_QUOTES, 'UTF-8'); ?>" required>
 
-    <select name="cliente_id" required>
-        <option value="">Selecione o cliente</option>
+    <select name="tipo" required>
+        <option value="admin" <?php echo ($usuario['tipo'] === 'admin') ? 'selected' : ''; ?>>admin</option>
+        <option value="visualizacao" <?php echo ($usuario['tipo'] === 'visualizacao') ? 'selected' : ''; ?>>visualizacao</option>
+    </select>
+
+    <select name="cliente_id">
+        <option value="">Sem empresa</option>
 
         <?php
         $sqlClientes = "SELECT * FROM clientes ORDER BY nome_empresa ASC";
@@ -71,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ?>
     </select>
 
-    <button type="submit">Salvar Alterações</button>
+    <button type="submit">Salvar Alteracoes</button>
 </form>
 
 </div>

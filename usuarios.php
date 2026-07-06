@@ -44,14 +44,14 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
     while ($linha = $resultado->fetch_assoc()) {
 
     echo "<tr>";
-    echo "<td>" . $linha['nome'] . "</td>";
-    echo "<td>" . $linha['email'] . "</td>";
-    echo "<td>" . $linha['tipo'] . "</td>";
-    echo "<td>" . ($linha['nome_empresa'] ?? 'Sem empresa') . "</td>";
-    echo "<td>" . $linha['criado_em'] . "</td>";
+    echo "<td>" . htmlspecialchars($linha['nome'], ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['email'], ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['tipo'], ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['nome_empresa'] ?? 'Sem empresa', ENT_QUOTES, 'UTF-8') . "</td>";
+    echo "<td>" . htmlspecialchars($linha['criado_em'], ENT_QUOTES, 'UTF-8') . "</td>";
 
     echo "<td>";
-    echo "<a href='editar_usuario.php?id=" . $linha['id'] . "' class='botao-exportar'>Editar</a>";
+    echo "<a href='editar_usuario.php?id=" . intval($linha['id']) . "' class='botao-exportar'>Editar</a>";
     echo "</td>";
 
     echo "</tr>";
