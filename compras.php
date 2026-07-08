@@ -1,6 +1,7 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'helpers_preco.php';
 ?>
 
 <!DOCTYPE html>
@@ -57,7 +58,7 @@ $resultado = $conn->query($sql);
             echo "<td>" . $linha['produto'] . "</td>";
             echo "<td>" . $linha['fornecedor'] . "</td>";
             echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
-            echo "<td>R$ " . number_format($linha['preco_pago'], 2, ',', '.') . "</td>";
+            echo "<td>" . formatarMoeda($linha['preco_pago'], $linha['preco_pago_casas_decimais'] ?? null) . "</td>";
             echo "<td>" . $linha['quantidade'] . "</td>";
             echo "<td>" . $linha['data_compra'] . "</td>";
             echo "<td>" . $linha['status'] . "</td>";

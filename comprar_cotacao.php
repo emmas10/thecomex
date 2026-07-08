@@ -13,13 +13,15 @@ $usuario_id = intval($_SESSION['usuario_id']);
 
 $stmt = $conn->prepare(
     "INSERT INTO compras
-    (produto, fornecedor, preco_pago, quantidade, data_compra, cotacao_id, status, cliente_id, usuario_id)
-    SELECT produto, fornecedor, preco, quantidade, CURDATE(), id, 'ativa', cliente_id, ?
+    (produto, fornecedor, preco_pago, preco_pago_casas_decimais, quantidade, data_compra, cotacao_id, status, cliente_id, usuario_id)
+    SELECT produto, fornecedor, preco, preco_casas_decimais, quantidade, CURDATE(), id, 'ativa', cliente_id, ?
     FROM cotacoes
     WHERE id = ?
     ON DUPLICATE KEY UPDATE
     status = 'ativa',
     data_compra = CURDATE(),
+    preco_pago = VALUES(preco_pago),
+    preco_pago_casas_decimais = VALUES(preco_pago_casas_decimais),
     usuario_id = ?"
 );
 $stmt->bind_param("iii", $usuario_id, $id, $usuario_id);

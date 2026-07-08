@@ -1,6 +1,7 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'helpers_preco.php';
 
 if ($_SESSION['usuario_tipo'] != 'admin') {
     echo "Acesso negado.";
@@ -9,7 +10,14 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
 
 $produto = trim($_POST['produto']);
 $fornecedor = trim($_POST['fornecedor']);
-$preco_pago = floatval($_POST['preco_pago']);
+$precoEntrada = parsePrecoEntrada($_POST['preco_pago']);
+if ($precoEntrada === false) {
+    echo "Preço inválido. Use até 6 casas decimais.";
+    exit;
+}
+
+$preco_pago = $precoEntrada['valor'];
+$preco_pago_casas_decimais = $precoEntrada['casas'];
 $quantidade = trim($_POST['quantidade']);
 $data_compra = $_POST['data_compra'];
 $observacoes = trim($_POST['observacoes']);
@@ -23,10 +31,10 @@ if ($cliente_id <= 0) {
 
 $stmt = $conn->prepare(
     "INSERT INTO compras
-    (produto, fornecedor, preco_pago, quantidade, data_compra, observacoes, cliente_id, usuario_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    (produto, fornecedor, preco_pago, preco_pago_casas_decimais, quantidade, data_compra, observacoes, cliente_id, usuario_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
-$stmt->bind_param("ssdsssii", $produto, $fornecedor, $preco_pago, $quantidade, $data_compra, $observacoes, $cliente_id, $usuario_id);
+$stmt->bind_param("sssisssii", $produto, $fornecedor, $preco_pago, $preco_pago_casas_decimais, $quantidade, $data_compra, $observacoes, $cliente_id, $usuario_id);
 
 if ($stmt->execute()) {
     header("Location: index.php");

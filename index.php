@@ -1,6 +1,7 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'helpers_preco.php';
 ?>
 
 <!DOCTYPE html>
@@ -119,9 +120,11 @@ $sqlProdutos = "
 
         cot.fornecedor AS fornecedor_cotado,
         cot.preco AS menor_preco_cotado,
+        cot.preco_casas_decimais AS menor_preco_cotado_casas,
 
         comp.fornecedor AS fornecedor_comprado,
-        comp.preco_pago AS menor_preco_comprado
+        comp.preco_pago AS menor_preco_comprado,
+        comp.preco_pago_casas_decimais AS menor_preco_comprado_casas
 
     FROM (
         SELECT TRIM(LOWER(produto)) AS produto_base FROM cotacoes
@@ -168,9 +171,11 @@ $sqlProdutos = "
 
         cot.fornecedor AS fornecedor_cotado,
         cot.preco AS menor_preco_cotado,
+        cot.preco_casas_decimais AS menor_preco_cotado_casas,
 
         comp.fornecedor AS fornecedor_comprado,
-        comp.preco_pago AS menor_preco_comprado
+        comp.preco_pago AS menor_preco_comprado,
+        comp.preco_pago_casas_decimais AS menor_preco_comprado_casas
 
     FROM (
         SELECT TRIM(LOWER(produto)) AS produto_base 
@@ -228,7 +233,7 @@ if (!$resultadoProdutos) {
         echo "<td>" . ($produto['fornecedor_cotado'] ?? 'Sem cotação') . "</td>";
 
         if ($produto['menor_preco_cotado'] !== null) {
-            echo "<td>R$ " . number_format($produto['menor_preco_cotado'], 2, ',', '.') . "</td>";
+            echo "<td>" . formatarMoeda($produto['menor_preco_cotado'], $produto['menor_preco_cotado_casas'] ?? null) . "</td>";
         } else {
             echo "<td>-</td>";
         }
@@ -236,7 +241,7 @@ if (!$resultadoProdutos) {
         echo "<td>" . ($produto['fornecedor_comprado'] ?? 'Sem compra') . "</td>";
 
         if ($produto['menor_preco_comprado'] !== null) {
-            echo "<td>R$ " . number_format($produto['menor_preco_comprado'], 2, ',', '.') . "</td>";
+            echo "<td>" . formatarMoeda($produto['menor_preco_comprado'], $produto['menor_preco_comprado_casas'] ?? null) . "</td>";
         } else {
             echo "<td>-</td>";
         }
@@ -265,12 +270,13 @@ if (!$resultadoProdutos) {
 </select>
     <input type="text" name="cotacao" placeholder="Nome/Nº da Cotação" required>
     <input type="text" name="produto" placeholder="Produto" required>
+    <input type="text" name="produto_base" placeholder="Produto base/padronizado">
     <input type="text" name="fornecedor" placeholder="Fornecedor" required>
-    <input type="number" step="0.01" name="preco" placeholder="Preço R$" required>
+    <input type="number" step="0.000001" min="0" name="preco" placeholder="Preço US$" required>
     <input type="text" name="origem" placeholder="Origem">
     <div class="campo">
     <label>Data do Pagamento</label>
-    <input type="date" name="pagamento">
+    <input type="text" name="pagamento">
 </div>
     <input type="text" name="quantidade" placeholder="Quantidade">
     <div class="campo">
@@ -410,7 +416,7 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
     echo "<td>" . $linha['cotacao'] . "</td>";
 }
 echo "<td>" . $linha['produto'] . "</td>";
-echo "<td>R$ " . number_format($linha['preco'], 2, ',', '.') . "</td>";
+echo "<td>" . formatarMoeda($linha['preco'], $linha['preco_casas_decimais'] ?? null) . "</td>";
 echo "<td>" . $linha['fornecedor'] . "</td>";
 
 
@@ -474,12 +480,12 @@ if ($resultadoCompra && $resultadoCompra->num_rows > 0) {
     $valorDiferenca = $precoAtual - $precoPago;
     $diferenca = ($precoPago != 0) ? ($valorDiferenca / $precoPago) * 100 : 0;
 
-    echo "<td>R$ " . number_format($precoPago, 2, ',', '.') . "</td>";
+    echo "<td>" . formatarMoeda($precoPago, $compra['preco_pago_casas_decimais'] ?? null) . "</td>";
 
     if ($valorDiferenca < 0) {
-        echo "<td style='color:green;font-weight:bold;'>Economia<br>" . number_format(abs($diferenca), 2, ',', '.') . "%<br>R$ " . number_format(abs($valorDiferenca), 2, ',', '.') . "</td>";
+        echo "<td style='color:green;font-weight:bold;'>Economia<br>" . formatarNumeroDecimal(abs($diferenca)) . "%<br>" . formatarMoeda(abs($valorDiferenca)) . "</td>";
     } elseif ($valorDiferenca > 0) {
-        echo "<td style='color:red;font-weight:bold;'>Aumento<br>" . number_format($diferenca, 2, ',', '.') . "%<br>R$ " . number_format($valorDiferenca, 2, ',', '.') . "</td>";
+        echo "<td style='color:red;font-weight:bold;'>Aumento<br>" . formatarNumeroDecimal($diferenca) . "%<br>" . formatarMoeda($valorDiferenca) . "</td>";
     } else {
         echo "<td style='font-weight:bold;'>➖ Mesmo preço</td>";
     }
@@ -508,6 +514,10 @@ $resultadoComprada = $stmtComprada->get_result();
 $cotacaoComprada = ($resultadoComprada && $resultadoComprada->num_rows > 0);
 
 if ($_SESSION['usuario_tipo'] == 'admin') {
+
+    echo "<a href='editar_cotacao.php?id=" . htmlspecialchars((string) $idCotacao, ENT_QUOTES, 'UTF-8') . "'>";
+    echo "<button type='button'>Editar Cota&ccedil;&atilde;o</button>";
+    echo "</a>";
 
     if ($cotacaoComprada) {
         $compra = $resultadoComprada->fetch_assoc();

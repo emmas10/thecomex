@@ -89,7 +89,8 @@ CREATE TABLE `compras` (
   `id` int(11) NOT NULL,
   `produto` varchar(255) DEFAULT NULL,
   `fornecedor` varchar(255) DEFAULT NULL,
-  `preco_pago` decimal(10,2) DEFAULT NULL,
+  `preco_pago` decimal(15,6) DEFAULT NULL,
+  `preco_pago_casas_decimais` tinyint(1) DEFAULT NULL,
   `quantidade` varchar(255) DEFAULT NULL,
   `data_compra` date DEFAULT NULL,
   `observacoes` text DEFAULT NULL,
@@ -119,8 +120,10 @@ CREATE TABLE `cotacoes` (
   `id` int(11) NOT NULL,
   `cotacao` varchar(255) DEFAULT NULL,
   `produto` varchar(255) DEFAULT NULL,
+  `produto_base` varchar(255) DEFAULT NULL,
   `fornecedor` varchar(255) DEFAULT NULL,
-  `preco` decimal(10,2) DEFAULT NULL,
+  `preco` decimal(15,6) DEFAULT NULL,
+  `preco_casas_decimais` tinyint(1) DEFAULT NULL,
   `origem` varchar(255) DEFAULT NULL,
   `pagamento` varchar(255) DEFAULT NULL,
   `quantidade` varchar(255) DEFAULT NULL,
@@ -194,7 +197,8 @@ ALTER TABLE `compras`
 -- Índices de tabela `cotacoes`
 --
 ALTER TABLE `cotacoes`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_cotacoes_produto_base` (`produto_base`);
 
 --
 -- Índices de tabela `usuarios`

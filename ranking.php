@@ -1,6 +1,7 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'helpers_preco.php';
 ?>
 
 <!DOCTYPE html>
@@ -48,14 +49,18 @@ include 'conexao.php';
             SELECT 
                 fornecedor,
                 MIN(menor_preco_cotado) AS menor_preco_cotado,
+                SUBSTRING_INDEX(GROUP_CONCAT(preco_cotado_casas ORDER BY menor_preco_cotado ASC SEPARATOR ','), ',', 1) AS menor_preco_cotado_casas,
                 MIN(menor_preco_comprado) AS menor_preco_comprado,
+                SUBSTRING_INDEX(GROUP_CONCAT(preco_comprado_casas ORDER BY menor_preco_comprado ASC SEPARATOR ','), ',', 1) AS menor_preco_comprado_casas,
                 SUM(qtd_cotacoes) AS qtd_cotacoes,
                 SUM(qtd_compras) AS qtd_compras
             FROM (
                 SELECT 
                     fornecedor,
                     MIN(preco) AS menor_preco_cotado,
+                    SUBSTRING_INDEX(GROUP_CONCAT(preco_casas_decimais ORDER BY preco ASC SEPARATOR ','), ',', 1) AS preco_cotado_casas,
                     NULL AS menor_preco_comprado,
+                    NULL AS preco_comprado_casas,
                     COUNT(*) AS qtd_cotacoes,
                     0 AS qtd_compras
                 FROM cotacoes
@@ -68,7 +73,9 @@ include 'conexao.php';
                 SELECT 
                     fornecedor,
                     NULL AS menor_preco_cotado,
+                    NULL AS preco_cotado_casas,
                     MIN(preco_pago) AS menor_preco_comprado,
+                    SUBSTRING_INDEX(GROUP_CONCAT(preco_pago_casas_decimais ORDER BY preco_pago ASC SEPARATOR ','), ',', 1) AS preco_comprado_casas,
                     0 AS qtd_cotacoes,
                     COUNT(*) AS qtd_compras
                 FROM compras
@@ -97,13 +104,13 @@ include 'conexao.php';
                 echo "<td>" . $linha['fornecedor'] . "</td>";
 
                 if ($linha['menor_preco_cotado'] !== null) {
-                    echo "<td>R$ " . number_format($linha['menor_preco_cotado'], 2, ',', '.') . "</td>";
+                    echo "<td>" . formatarMoeda($linha['menor_preco_cotado'], $linha['menor_preco_cotado_casas'] ?? null) . "</td>";
                 } else {
                     echo "<td>-</td>";
                 }
 
                 if ($linha['menor_preco_comprado'] !== null) {
-                    echo "<td>R$ " . number_format($linha['menor_preco_comprado'], 2, ',', '.') . "</td>";
+                    echo "<td>" . formatarMoeda($linha['menor_preco_comprado'], $linha['menor_preco_comprado_casas'] ?? null) . "</td>";
                 } else {
                     echo "<td>-</td>";
                 }

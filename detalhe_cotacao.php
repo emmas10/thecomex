@@ -1,6 +1,7 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'helpers_preco.php';
 
 $id = intval($_GET['id']);
 
@@ -54,7 +55,7 @@ $cotacao = $resultado->fetch_assoc();
     <tr><td>Cotação</td><td><?php echo $cotacao['cotacao']; ?></td></tr>
     <tr><td>Produto</td><td><?php echo $cotacao['produto']; ?></td></tr>
     <tr><td>Fornecedor</td><td><?php echo $cotacao['fornecedor']; ?></td></tr>
-    <tr><td>Preço</td><td>R$ <?php echo number_format($cotacao['preco'], 2, ',', '.'); ?></td></tr>
+    <tr><td>Preço</td><td><?php echo formatarMoeda($cotacao['preco'], $cotacao['preco_casas_decimais'] ?? null); ?></td></tr>
     <tr><td>Origem</td><td><?php echo $cotacao['origem']; ?></td></tr>
     <tr><td>Pagamento</td><td><?php echo $cotacao['pagamento']; ?></td></tr>
     <tr><td>Quantidade</td><td><?php echo $cotacao['quantidade']; ?></td></tr>
