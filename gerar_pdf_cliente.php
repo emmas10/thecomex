@@ -66,26 +66,84 @@ $resultado = $stmt->get_result();
 $nomeEmpresa = htmlspecialchars($cliente['nome_empresa'], ENT_QUOTES, 'UTF-8');
 
 $html = "
-<h1>Relatorio de Cotacoes - TheComex</h1>
+<style>
+    body {
+        font-family: DejaVu Sans, Arial, sans-serif;
+        font-size: 12px;
+        color: #222;
+    }
+
+    h1 {
+        margin-bottom: 8px;
+    }
+
+    h2 {
+        margin: 0 0 6px 0;
+    }
+
+    .produto-bloco {
+        margin-top: 22px;
+    }
+
+    .produto-titulo {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    th,
+    td {
+        border: 1px solid #555;
+        padding: 6px;
+    }
+
+    th {
+        background-color: #eeeeee;
+        text-align: left;
+    }
+</style>
+
+<h1>Relatorio de Cotacoes - Latina America Chemicals</h1>
 <h2>Empresa: {$nomeEmpresa}</h2>
 <p>Gerado em: " . date('d/m/Y H:i') . "</p>
-
-<table border='1' width='100%' cellspacing='0' cellpadding='6'>
-<tr>
-    <th>Produto</th>
-    <th>Preco</th>
-    <th>Fornecedor</th>
-    <th>Origem</th>
-    <th>Pagamento</th>
-    <th>Data</th>
-    <th>Status</th>
-</tr>
 ";
 
+$produtoAtual = null;
+$tabelaAberta = false;
+
 while ($linha = $resultado->fetch_assoc()) {
+    if ($produtoAtual !== $linha['produto_grupo']) {
+        if ($tabelaAberta) {
+            $html .= "</table></div>";
+        }
+
+        $produtoAtual = $linha['produto_grupo'];
+        $produtoTitulo = htmlspecialchars($linha['produto'], ENT_QUOTES, 'UTF-8');
+
+        $html .= "
+        <div class='produto-bloco'>
+            <div class='produto-titulo'>Produto: {$produtoTitulo}</div>
+            <table>
+                <tr>
+                    <th>Preco</th>
+                    <th>Fornecedor</th>
+                    <th>Origem</th>
+                    <th>Pagamento</th>
+                    <th>Data</th>
+                    <th>Status</th>
+                </tr>
+        ";
+
+        $tabelaAberta = true;
+    }
+
     $preco = formatarMoeda($linha['preco'], $linha['preco_casas_decimais'] ?? null);
     $cor = ((float) $linha['preco'] === (float) $linha['menor_preco']) ? "#7CFC00" : "#FFFFFF";
-    $produto = htmlspecialchars($linha['produto'], ENT_QUOTES, 'UTF-8');
     $fornecedor = htmlspecialchars($linha['fornecedor'], ENT_QUOTES, 'UTF-8');
     $origem = htmlspecialchars($linha['origem'], ENT_QUOTES, 'UTF-8');
     $pagamento = htmlspecialchars($linha['pagamento'], ENT_QUOTES, 'UTF-8');
@@ -94,7 +152,6 @@ while ($linha = $resultado->fetch_assoc()) {
 
     $html .= "
     <tr style='background-color: {$cor};'>
-        <td>{$produto}</td>
         <td>{$preco}</td>
         <td>{$fornecedor}</td>
         <td>{$origem}</td>
@@ -105,7 +162,9 @@ while ($linha = $resultado->fetch_assoc()) {
     ";
 }
 
-$html .= "</table>";
+if ($tabelaAberta) {
+    $html .= "</table></div>";
+}
 
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
