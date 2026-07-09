@@ -9,7 +9,6 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
 }
 
 $id = intval($_POST['id']);
-
 $stmt = $conn->prepare("DELETE FROM cotacoes WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();

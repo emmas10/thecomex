@@ -64,6 +64,13 @@ $stmt->execute();
 $resultado = $stmt->get_result();
 
 $nomeEmpresa = htmlspecialchars($cliente['nome_empresa'], ENT_QUOTES, 'UTF-8');
+$logoPath = __DIR__ . "/img/logo-lachemicals.jpg";
+$logoHtml = "";
+
+if (is_readable($logoPath)) {
+    $logoBase64 = base64_encode(file_get_contents($logoPath));
+    $logoHtml = "<img src='data:image/jpeg;base64,{$logoBase64}' alt='Logo' class='logo-pdf'>";
+}
 
 $html = "
 <style>
@@ -74,7 +81,27 @@ $html = "
     }
 
     h1 {
-        margin-bottom: 8px;
+        margin: 0;
+    }
+
+    .cabecalho-pdf {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+    }
+
+    .cabecalho-pdf td {
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    .logo-pdf {
+        width: 210px;
+    }
+
+    .logo-coluna {
+        text-align: right;
+        vertical-align: top;
     }
 
     h2 {
@@ -108,7 +135,12 @@ $html = "
     }
 </style>
 
-<h1>Relatorio de Cotacoes - Latina America Chemicals</h1>
+<table class='cabecalho-pdf'>
+    <tr>
+        <td><h1>Relatorio de Cotacoes - Latina America Chemicals</h1></td>
+        <td class='logo-coluna'>{$logoHtml}</td>
+    </tr>
+</table>
 <h2>Empresa: {$nomeEmpresa}</h2>
 <p>Gerado em: " . date('d/m/Y H:i') . "</p>
 ";
