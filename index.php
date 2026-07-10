@@ -479,7 +479,7 @@ if ($resultadoCompra && $resultadoCompra->num_rows > 0) {
     $precoAtual = floatval($linha['preco']);
 
     $valorDiferenca = $precoAtual - $precoPago;
-    $diferenca = ($precoPago != 0) ? ($valorDiferenca / $precoPago) * 100 : 0;
+    $diferenca = ($precoAtual != 0) ? ($valorDiferenca / $precoAtual) * 100 : 0;
 
     echo "<td>" . formatarMoeda($precoPago, $compra['preco_pago_casas_decimais'] ?? null) . "</td>";
 

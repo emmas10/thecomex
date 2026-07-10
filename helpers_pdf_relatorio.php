@@ -247,7 +247,16 @@ function montarHtmlDiferencaReferenciaRelatorio($precoCotado, $valorUltimaCompra
 
     $precoCotado = (float) $precoCotado;
     $valorUltimaCompra = (float) $valorUltimaCompra;
-    $percentual = (($precoCotado - $valorUltimaCompra) / $valorUltimaCompra) * 100;
+    $valorDiferenca = $precoCotado - $valorUltimaCompra;
+
+    if ($precoCotado == 0.0) {
+        return [
+            'texto' => 'Sem referencia',
+            'cor' => '#555',
+        ];
+    }
+
+    $percentual = ($valorDiferenca / $precoCotado) * 100;
 
     if ($percentual < 0) {
         return [
@@ -399,7 +408,7 @@ function montarHtmlTabelaCotacoesRelatorio($cotacoes, $agruparPorProduto = true)
                     <tr>
                         <th>Preco cotado</th>
                         <th>Ultima compra</th>
-                        <th>Diferenca</th>
+                        <th>Diferença ultima compra</th>
                         <th>Fornecedor</th>
                         <th>Origem</th>
                         <th>Pagamento</th>
