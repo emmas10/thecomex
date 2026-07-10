@@ -256,16 +256,18 @@ function montarHtmlDiferencaReferenciaRelatorio($precoCotado, $valorUltimaCompra
         ];
     }
 
-    $percentual = ($valorDiferenca / $precoCotado) * 100;
+    if ($valorDiferenca < 0) {
+        $percentual = ($valorDiferenca / $precoCotado) * 100;
 
-    if ($percentual < 0) {
         return [
             'texto' => formatarNumeroDecimal($percentual, 2) . '% - Economia',
             'cor' => 'green',
         ];
     }
 
-    if ($percentual > 0) {
+    if ($valorDiferenca > 0) {
+        $percentual = ($valorDiferenca / $valorUltimaCompra) * 100;
+
         return [
             'texto' => '+' . formatarNumeroDecimal($percentual, 2) . '% - Aumento',
             'cor' => 'red',

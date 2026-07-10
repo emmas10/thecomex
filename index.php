@@ -479,13 +479,14 @@ if ($resultadoCompra && $resultadoCompra->num_rows > 0) {
     $precoAtual = floatval($linha['preco']);
 
     $valorDiferenca = $precoAtual - $precoPago;
-    $diferenca = ($precoAtual != 0) ? ($valorDiferenca / $precoAtual) * 100 : 0;
 
     echo "<td>" . formatarMoeda($precoPago, $compra['preco_pago_casas_decimais'] ?? null) . "</td>";
 
     if ($valorDiferenca < 0) {
+        $diferenca = ($precoAtual != 0) ? ($valorDiferenca / $precoAtual) * 100 : 0;
         echo "<td style='color:green;font-weight:bold;'>Economia<br>" . formatarNumeroDecimal(abs($diferenca)) . "%<br>" . formatarMoeda(abs($valorDiferenca)) . "</td>";
     } elseif ($valorDiferenca > 0) {
+        $diferenca = ($precoPago != 0) ? ($valorDiferenca / $precoPago) * 100 : 0;
         echo "<td style='color:red;font-weight:bold;'>Aumento<br>" . formatarNumeroDecimal($diferenca) . "%<br>" . formatarMoeda($valorDiferenca) . "</td>";
     } else {
         echo "<td style='font-weight:bold;'>➖ Mesmo preço</td>";
