@@ -1,6 +1,7 @@
 <?php
 include 'verifica_login.php';
 include 'conexao.php';
+include 'registrar_auditoria.php';
 
 if ($_SESSION['usuario_tipo'] != 'admin') {
     echo "Acesso negado.";
@@ -20,6 +21,12 @@ $stmt = $conn->prepare(
 );
 $stmt->bind_param("sssss", $nome_empresa, $cnpj, $responsavel, $email, $telefone);
 $stmt->execute();
+
+registrarAuditoria(
+    $conn,
+    'Cadastro de cliente',
+    'Usuario cadastrou o cliente ' . $nome_empresa
+);
 
 header("Location: clientes.php");
 exit;

@@ -1,0 +1,1 @@
+ALTER TABLE clientes ADD ativo TINYINT(1) DEFAULT 1;

@@ -57,7 +57,7 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 }
 ?>
 
-<h1>TheComex - Cadastro de Cotações</h1>
+<h1> Latin America Chemicals - Cadastro de Cotações</h1>
 
 <div class="dashboard">
     <div class="card">
@@ -89,6 +89,7 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 
     <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>
         <a href="clientes.php"> Clientes</a>
+        <a href="produtos.php"> Produtos</a>
         <a href="cadastro.php"> Cadastrar Usuário</a>
     <?php } ?>
 
@@ -260,11 +261,11 @@ if (!$resultadoProdutos) {
     <option value="">Selecione o cliente</option>
 
     <?php
-    $sqlClientes = "SELECT * FROM clientes ORDER BY nome_empresa ASC";
+    $sqlClientes = "SELECT id, nome_empresa FROM clientes WHERE ativo = 1 ORDER BY nome_empresa ASC";
     $resultadoClientes = $conn->query($sqlClientes);
 
     while ($cliente = $resultadoClientes->fetch_assoc()) {
-        echo "<option value='" . $cliente['id'] . "'>" . $cliente['nome_empresa'] . "</option>";
+        echo "<option value='" . intval($cliente['id']) . "'>" . htmlspecialchars($cliente['nome_empresa'], ENT_QUOTES, 'UTF-8') . "</option>";
     }
     ?>
 </select>
@@ -402,7 +403,7 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 $resultadoMenor = $conn->query($sqlMenor);
 $menor = $resultadoMenor->fetch_assoc()['menor_preco'];
         if ($linha['preco'] == $menor) {
-            echo "<tr style='background-color: #7CFC00; font-weight: bold;'>";
+            echo "<tr style='background-color: #75b337; font-weight: bold;'>";
         } else {
             echo "<tr>";
         }

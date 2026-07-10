@@ -52,8 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $produto = trim($_POST['produto'] ?? '');
     $produto_base = trim($_POST['produto_base'] ?? '');
     if ($produto_base === '') {
-        $produto_base = normalizarProdutoBase($produto);
+        $produto_base = $produto;
     }
+    $produto_base = normalizarProdutoBase($produto_base);
     $fornecedor = trim($_POST['fornecedor'] ?? '');
     $precoEntrada = parsePrecoEntrada($_POST['preco'] ?? '');
     $origem = trim($_POST['origem'] ?? '');
@@ -68,6 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($precoEntrada === false) {
         $erro = "Preco invalido. Use ate 6 casas decimais.";
     } else {
+        $stmtCliente = $conn->prepare("SELECT id FROM clientes WHERE id = ? AND ativo = 1 LIMIT 1");
+        $stmtCliente->bind_param("i", $cliente_id);
+        $stmtCliente->execute();
+
+        if (!$stmtCliente->get_result()->fetch_assoc()) {
+            $erro = "Cliente invalido ou desativado.";
+        }
+    }
+
+    if ($erro === '') {
         $preco = $precoEntrada['valor'];
         $preco_casas_decimais = $precoEntrada['casas'];
 
@@ -207,7 +218,7 @@ function valorPrecoInput($valor, $casas)
     <select name="cliente_id" required>
         <option value="">Selecione a empresa</option>
         <?php
-        $resultadoClientes = $conn->query("SELECT id, nome_empresa FROM clientes ORDER BY nome_empresa ASC");
+        $resultadoClientes = $conn->query("SELECT id, nome_empresa FROM clientes WHERE ativo = 1 ORDER BY nome_empresa ASC");
 
         while ($cliente = $resultadoClientes->fetch_assoc()) {
             $clienteId = intval($cliente['id']);

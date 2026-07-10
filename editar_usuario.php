@@ -31,7 +31,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (!in_array($tipo, $tiposPermitidos, true)) {
         $erro = "Tipo de usuario invalido.";
-    } else {
+    }
+
+    if ($erro === '' && $cliente_id !== null) {
+        $stmtCliente = $conn->prepare("SELECT id FROM clientes WHERE id = ? AND ativo = 1 LIMIT 1");
+        $stmtCliente->bind_param("i", $cliente_id);
+        $stmtCliente->execute();
+
+        if (!$stmtCliente->get_result()->fetch_assoc()) {
+            $erro = "Cliente invalido ou desativado.";
+        }
+    }
+
+    if ($erro === '') {
         $removendoProprioAdmin = (
             intval($_SESSION['usuario_id']) === $id
             && $usuario['tipo'] === 'admin'
@@ -112,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <option value="">Sem empresa</option>
 
         <?php
-        $sqlClientes = "SELECT * FROM clientes ORDER BY nome_empresa ASC";
+        $sqlClientes = "SELECT id, nome_empresa FROM clientes WHERE ativo = 1 ORDER BY nome_empresa ASC";
         $resultadoClientes = $conn->query($sqlClientes);
 
         while ($cliente = $resultadoClientes->fetch_assoc()) {

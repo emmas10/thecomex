@@ -14,8 +14,9 @@ $cotacao = trim($_POST['cotacao']);
 $produto = trim($_POST['produto']);
 $produto_base = trim($_POST['produto_base'] ?? '');
 if ($produto_base === '') {
-    $produto_base = normalizarProdutoBase($produto);
+    $produto_base = $produto;
 }
+$produto_base = normalizarProdutoBase($produto_base);
 $fornecedor = trim($_POST['fornecedor']);
 $precoEntrada = parsePrecoEntrada($_POST['preco']);
 if ($precoEntrada === false) {
@@ -29,6 +30,15 @@ $origem = trim($_POST['origem']);
 $pagamento = $_POST['pagamento'];
 $quantidade = trim($_POST['quantidade']);
 $data_cotacao = $_POST['data_cotacao'];
+
+$stmtCliente = $conn->prepare("SELECT id FROM clientes WHERE id = ? AND ativo = 1 LIMIT 1");
+$stmtCliente->bind_param("i", $cliente_id);
+$stmtCliente->execute();
+
+if (!$stmtCliente->get_result()->fetch_assoc()) {
+    echo "Cliente invalido ou desativado.";
+    exit;
+}
 
 if (colunaProdutoBaseExiste($conn)) {
     $stmt = $conn->prepare(

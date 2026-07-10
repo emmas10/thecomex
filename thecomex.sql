@@ -66,6 +66,7 @@ CREATE TABLE `clientes` (
   `responsavel` varchar(150) DEFAULT NULL,
   `email` varchar(150) DEFAULT NULL,
   `telefone` varchar(50) DEFAULT NULL,
+  `ativo` tinyint(1) DEFAULT 1,
   `criado_em` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -73,11 +74,11 @@ CREATE TABLE `clientes` (
 -- Despejando dados para a tabela `clientes`
 --
 
-INSERT INTO `clientes` (`id`, `nome_empresa`, `cnpj`, `responsavel`, `email`, `telefone`, `criado_em`) VALUES
-(1, 'teste', '1212121212', 'Teste', 'teste@gmail.com', '41985008346', '2026-06-17 16:56:04'),
-(2, 'teste 2', '1212121214', 'Teste2', 'teste2@gmail.com', '419850083465', '2026-06-17 17:07:55'),
-(3, 'Penta', '15.211.234/0001-55', 'Rafael Zannin', 'penta@gamail.com', '313131313', '2026-06-19 19:34:47'),
-(4, 'Quimitextil', '', '', '', '', '2026-06-19 19:35:42');
+INSERT INTO `clientes` (`id`, `nome_empresa`, `cnpj`, `responsavel`, `email`, `telefone`, `ativo`, `criado_em`) VALUES
+(1, 'teste', '1212121212', 'Teste', 'teste@gmail.com', '41985008346', 1, '2026-06-17 16:56:04'),
+(2, 'teste 2', '1212121214', 'Teste2', 'teste2@gmail.com', '419850083465', 1, '2026-06-17 17:07:55'),
+(3, 'Penta', '15.211.234/0001-55', 'Rafael Zannin', 'penta@gamail.com', '313131313', 1, '2026-06-19 19:34:47'),
+(4, 'Quimitextil', '', '', '', '', 1, '2026-06-19 19:35:42');
 
 -- --------------------------------------------------------
 
@@ -147,6 +148,21 @@ INSERT INTO `cotacoes` (`id`, `cotacao`, `produto`, `fornecedor`, `preco`, `orig
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `produto_referencias`
+--
+
+CREATE TABLE `produto_referencias` (
+  `id` int(11) NOT NULL,
+  `cliente_id` int(11) NOT NULL,
+  `produto_base` varchar(255) NOT NULL,
+  `valor_ultima_compra` decimal(15,6) DEFAULT NULL,
+  `data_ultima_compra` date DEFAULT NULL,
+  `atualizado_em` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `usuarios`
 --
 
@@ -201,6 +217,14 @@ ALTER TABLE `cotacoes`
   ADD KEY `idx_cotacoes_produto_base` (`produto_base`);
 
 --
+-- Índices de tabela `produto_referencias`
+--
+ALTER TABLE `produto_referencias`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `cliente_produto` (`cliente_id`,`produto_base`),
+  ADD KEY `idx_produto_referencias_cliente` (`cliente_id`);
+
+--
 -- Índices de tabela `usuarios`
 --
 ALTER TABLE `usuarios`
@@ -236,10 +260,22 @@ ALTER TABLE `cotacoes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
+-- AUTO_INCREMENT de tabela `produto_referencias`
+--
+ALTER TABLE `produto_referencias`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `usuarios`
 --
 ALTER TABLE `usuarios`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- Restrições de tabela `produto_referencias`
+--
+ALTER TABLE `produto_referencias`
+  ADD CONSTRAINT `fk_produto_referencias_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
