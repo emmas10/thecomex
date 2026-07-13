@@ -417,7 +417,7 @@ function montarHtmlTabelaCotacoesRelatorio($cotacoes, $agruparPorProduto = true)
         }
 
         $diferenca = montarHtmlDiferencaReferenciaRelatorio($linha['preco'] ?? null, $valorUltimaCompra);
-        $cor = $primeiraLinhaDoBloco ? "#7CFC00" : "#FFFFFF";
+        $cor = $primeiraLinhaDoBloco ? "#6cc531" : "#FFFFFF";
         $fornecedor = htmlspecialchars($linha['fornecedor'] ?? '', ENT_QUOTES, 'UTF-8');
         $origem = htmlspecialchars($linha['origem'] ?? '', ENT_QUOTES, 'UTF-8');
         $pagamento = htmlspecialchars($linha['pagamento'] ?? '', ENT_QUOTES, 'UTF-8');

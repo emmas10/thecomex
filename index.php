@@ -103,7 +103,6 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 
     <a href="index.php"> Início</a>
 
-    <a href="ranking.php"> Ranking de Fornecedores</a>
 
     <a href="compras.php"> Histórico de Compras</a>
     <?php if ($_SESSION['usuario_tipo'] == 'admin') { ?>

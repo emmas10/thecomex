@@ -24,8 +24,6 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
 
     <form action="salvar_cliente.php" method="POST">
         <input type="text" name="nome_empresa" placeholder="Nome da empresa" required>
-        <input type="text" name="cnpj" placeholder="CNPJ">
-        <input type="text" name="responsavel" placeholder="Responsavel">
         <input type="email" name="email" placeholder="E-mail">
         <input type="text" name="telefone" placeholder="Telefone">
 
@@ -37,8 +35,6 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
     <table>
         <tr>
             <th>Empresa</th>
-            <th>CNPJ</th>
-            <th>Responsavel</th>
             <th>E-mail</th>
             <th>Telefone</th>
             <th>Acao</th>
@@ -46,7 +42,7 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
 
         <?php
         $stmt = $conn->prepare(
-            "SELECT id, nome_empresa, cnpj, responsavel, email, telefone
+            "SELECT id, nome_empresa, email, telefone
              FROM clientes
              WHERE ativo = 1
              ORDER BY nome_empresa ASC"
@@ -59,8 +55,6 @@ if ($_SESSION['usuario_tipo'] != 'admin') {
 
             echo "<tr>";
             echo "<td>" . htmlspecialchars($linha['nome_empresa'], ENT_QUOTES, 'UTF-8') . "</td>";
-            echo "<td>" . htmlspecialchars($linha['cnpj'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
-            echo "<td>" . htmlspecialchars($linha['responsavel'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
             echo "<td>" . htmlspecialchars($linha['email'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
             echo "<td>" . htmlspecialchars($linha['telefone'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
             echo "<td>";
