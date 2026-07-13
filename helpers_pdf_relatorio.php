@@ -132,33 +132,13 @@ function aplicarReferenciasProdutoRelatorio($cotacoes, $referencias)
 function prepararCotacoesRelatorio($cotacoes)
 {
     $preparadas = [];
-    $gruposPorProdutoVisual = [];
 
     foreach ($cotacoes as $linha) {
         $produtoGrupo = obterProdutoGrupoCotacao($linha);
-        $produtoVisualNormalizado = normalizarProdutoBase($linha['produto'] ?? '');
 
         $linha['produto_grupo_relatorio'] = $produtoGrupo;
-        $linha['produto_visual_relatorio'] = $produtoVisualNormalizado;
         $preparadas[] = $linha;
-
-        if ($produtoVisualNormalizado !== '') {
-            if (!isset($gruposPorProdutoVisual[$produtoVisualNormalizado])) {
-                $gruposPorProdutoVisual[$produtoVisualNormalizado] = [];
-            }
-
-            $gruposPorProdutoVisual[$produtoVisualNormalizado][$produtoGrupo] = true;
-        }
     }
-
-    foreach ($preparadas as &$cotacao) {
-        $produtoVisualNormalizado = $cotacao['produto_visual_relatorio'] ?? '';
-
-        if ($produtoVisualNormalizado !== '' && isset($gruposPorProdutoVisual[$produtoVisualNormalizado]) && count($gruposPorProdutoVisual[$produtoVisualNormalizado]) > 1) {
-            $cotacao['produto_grupo_relatorio'] = $produtoVisualNormalizado;
-        }
-    }
-    unset($cotacao);
 
     usort($preparadas, function ($a, $b) {
         $comparacaoGrupo = strcmp($a['produto_grupo_relatorio'], $b['produto_grupo_relatorio']);

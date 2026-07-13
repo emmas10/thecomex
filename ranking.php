@@ -34,16 +34,23 @@ include 'helpers_preco.php';
 
     if ($produtoBusca != '') {
 
+        $produtoGrupoBusca = normalizarProdutoBase($produtoBusca);
+
         echo "<h2>Produto analisado: " . $produtoBusca . "</h2>";
 
         if ($_SESSION['usuario_tipo'] == 'admin') {
             $filtroClienteCotacoes = "";
-            $filtroClienteCompras = "AND status = 'ativa'";
+            $filtroClienteCompras = "";
         } else {
-            $cliente_id = $_SESSION['cliente_id'];
-            $filtroClienteCotacoes = "AND cliente_id = '$cliente_id'";
-            $filtroClienteCompras = "AND status = 'ativa' AND cliente_id = '$cliente_id'";
+            $cliente_id = intval($_SESSION['cliente_id']);
+            $filtroClienteCotacoes = "AND c.cliente_id = ?";
+            $filtroClienteCompras = "AND cp.cliente_id = ?";
         }
+
+        $grupoCotacaoRanking = expressaoProdutoGrupoCotacaoSql('c');
+        $grupoCompraRanking = colunaProdutoBaseComprasExiste($conn)
+            ? expressaoProdutoGrupoCompraSql('cp', 'c_compra')
+            : "COALESCE(NULLIF(TRIM(c_compra.produto_base), ''), TRIM(LOWER(cp.produto)))";
 
         $sqlRanking = "
             SELECT 
@@ -63,8 +70,8 @@ include 'helpers_preco.php';
                     NULL AS preco_comprado_casas,
                     COUNT(*) AS qtd_cotacoes,
                     0 AS qtd_compras
-                FROM cotacoes
-                WHERE TRIM(LOWER(produto)) = TRIM(LOWER('$produtoBusca'))
+                FROM cotacoes c
+                WHERE {$grupoCotacaoRanking} = ?
                 $filtroClienteCotacoes
                 GROUP BY fornecedor
 
@@ -78,8 +85,10 @@ include 'helpers_preco.php';
                     SUBSTRING_INDEX(GROUP_CONCAT(preco_pago_casas_decimais ORDER BY preco_pago ASC SEPARATOR ','), ',', 1) AS preco_comprado_casas,
                     0 AS qtd_cotacoes,
                     COUNT(*) AS qtd_compras
-                FROM compras
-                WHERE TRIM(LOWER(produto)) = TRIM(LOWER('$produtoBusca'))
+                FROM compras cp
+                LEFT JOIN cotacoes c_compra ON c_compra.id = cp.cotacao_id
+                WHERE {$grupoCompraRanking} = ?
+                AND cp.status = 'ativa'
                 $filtroClienteCompras
                 GROUP BY fornecedor
             ) base
@@ -87,7 +96,16 @@ include 'helpers_preco.php';
             ORDER BY COALESCE(menor_preco_comprado, menor_preco_cotado) ASC
         ";
 
-        $resultadoRanking = $conn->query($sqlRanking);
+        $stmtRanking = $conn->prepare($sqlRanking);
+
+        if ($_SESSION['usuario_tipo'] == 'admin') {
+            $stmtRanking->bind_param("ss", $produtoGrupoBusca, $produtoGrupoBusca);
+        } else {
+            $stmtRanking->bind_param("sisi", $produtoGrupoBusca, $cliente_id, $produtoGrupoBusca, $cliente_id);
+        }
+
+        $stmtRanking->execute();
+        $resultadoRanking = $stmtRanking->get_result();
 
         if ($resultadoRanking->num_rows > 0) {
             echo "<table>";

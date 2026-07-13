@@ -126,10 +126,21 @@ function obterProdutoGrupoCotacao($cotacao)
 
 function colunaProdutoBaseExiste($conn)
 {
-    static $existe = null;
+    return colunaExiste($conn, 'cotacoes', 'produto_base');
+}
 
-    if ($existe !== null) {
-        return $existe;
+function colunaProdutoBaseComprasExiste($conn)
+{
+    return colunaExiste($conn, 'compras', 'produto_base');
+}
+
+function colunaExiste($conn, $tabela, $campo)
+{
+    static $cache = [];
+    $chave = $tabela . '.' . $campo;
+
+    if (array_key_exists($chave, $cache)) {
+        return $cache[$chave];
     }
 
     $stmt = $conn->prepare(
@@ -139,15 +150,72 @@ function colunaProdutoBaseExiste($conn)
          AND TABLE_NAME = ?
          AND COLUMN_NAME = ?"
     );
-    $tabela = 'cotacoes';
-    $campo = 'produto_base';
     $stmt->bind_param("ss", $tabela, $campo);
     $stmt->execute();
     $resultado = $stmt->get_result();
     $linha = $resultado ? $resultado->fetch_assoc() : null;
 
-    $existe = ($linha && intval($linha['total']) > 0);
+    $cache[$chave] = ($linha && intval($linha['total']) > 0);
 
-    return $existe;
+    return $cache[$chave];
+}
+
+function tabelaExiste($conn, $tabela)
+{
+    static $cache = [];
+
+    if (array_key_exists($tabela, $cache)) {
+        return $cache[$tabela];
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) AS total
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = ?"
+    );
+    $stmt->bind_param("s", $tabela);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+    $linha = $resultado ? $resultado->fetch_assoc() : null;
+    $cache[$tabela] = ($linha && intval($linha['total']) > 0);
+
+    return $cache[$tabela];
+}
+
+function prefixoAliasSql($alias)
+{
+    if ($alias === '') {
+        return '';
+    }
+
+    if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $alias)) {
+        throw new InvalidArgumentException('Alias SQL invalido.');
+    }
+
+    return $alias . '.';
+}
+
+function expressaoProdutoGrupoCotacaoSql($alias = '')
+{
+    $prefixo = prefixoAliasSql($alias);
+
+    return "COALESCE(NULLIF(TRIM({$prefixo}produto_base), ''), TRIM(LOWER({$prefixo}produto)))";
+}
+
+function expressaoProdutoGrupoCompraSql($aliasCompra = '', $aliasCotacao = '')
+{
+    $compra = prefixoAliasSql($aliasCompra);
+    $partes = [];
+
+    if ($aliasCotacao !== '') {
+        $cotacao = prefixoAliasSql($aliasCotacao);
+        $partes[] = "NULLIF(TRIM({$cotacao}produto_base), '')";
+    }
+
+    $partes[] = "NULLIF(TRIM({$compra}produto_base), '')";
+    $partes[] = "TRIM(LOWER({$compra}produto))";
+
+    return 'COALESCE(' . implode(', ', $partes) . ')';
 }
 ?>

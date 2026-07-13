@@ -89,6 +89,7 @@ INSERT INTO `clientes` (`id`, `nome_empresa`, `cnpj`, `responsavel`, `email`, `t
 CREATE TABLE `compras` (
   `id` int(11) NOT NULL,
   `produto` varchar(255) DEFAULT NULL,
+  `produto_base` varchar(255) DEFAULT NULL,
   `fornecedor` varchar(255) DEFAULT NULL,
   `preco_pago` decimal(15,6) DEFAULT NULL,
   `preco_pago_casas_decimais` tinyint(1) DEFAULT NULL,
@@ -207,7 +208,8 @@ ALTER TABLE `clientes`
 --
 ALTER TABLE `compras`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unica_cotacao` (`cotacao_id`);
+  ADD UNIQUE KEY `unica_cotacao` (`cotacao_id`),
+  ADD KEY `idx_compras_produto_base` (`produto_base`);
 
 --
 -- Índices de tabela `cotacoes`

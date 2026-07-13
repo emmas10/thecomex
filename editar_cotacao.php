@@ -34,6 +34,10 @@ if (!$cotacao) {
     exit;
 }
 
+$clienteIdOriginal = intval($cotacao['cliente_id'] ?? 0);
+$produtoOriginal = trim((string) ($cotacao['produto'] ?? ''));
+$produtoBaseOriginal = obterProdutoGrupoCotacao($cotacao);
+
 $stmtCompra = $conn->prepare(
     "SELECT id
      FROM compras
@@ -50,11 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cliente_id = intval($_POST['cliente_id'] ?? 0);
     $cotacaoNome = trim($_POST['cotacao'] ?? '');
     $produto = trim($_POST['produto'] ?? '');
+    $produtoFoiAlterado = ($produto !== $produtoOriginal);
     $produto_base = trim($_POST['produto_base'] ?? '');
-    if ($produto_base === '') {
-        $produto_base = $produto;
+    if ($produtoFoiAlterado || $produto_base === '') {
+        $produto_base = normalizarProdutoBase($produto);
+    } else {
+        $produto_base = normalizarProdutoBase($produto_base);
     }
-    $produto_base = normalizarProdutoBase($produto_base);
     $fornecedor = trim($_POST['fornecedor'] ?? '');
     $precoEntrada = parsePrecoEntrada($_POST['preco'] ?? '');
     $origem = trim($_POST['origem'] ?? '');
@@ -81,6 +87,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($erro === '') {
         $preco = $precoEntrada['valor'];
         $preco_casas_decimais = $precoEntrada['casas'];
+
+        $conn->begin_transaction();
+
+        try {
+            if ($produtoFoiAlterado && $clienteIdOriginal === $cliente_id) {
+                if (colunaProdutoBaseComprasExiste($conn)) {
+                    $grupoCompra = expressaoProdutoGrupoCompraSql('cp', 'c');
+                    $stmtMigrarCompras = $conn->prepare(
+                        "UPDATE compras cp
+                         LEFT JOIN cotacoes c ON c.id = cp.cotacao_id
+                         SET cp.produto_base = ?
+                         WHERE cp.cliente_id = ?
+                         AND {$grupoCompra} = ?"
+                    );
+                    $stmtMigrarCompras->bind_param("sis", $produto_base, $clienteIdOriginal, $produtoBaseOriginal);
+
+                    if (!$stmtMigrarCompras->execute()) {
+                        throw new RuntimeException('Erro ao migrar compras do produto.');
+                    }
+                }
+
+                if (colunaProdutoBaseExiste($conn)) {
+                    $grupoCotacao = expressaoProdutoGrupoCotacaoSql();
+                    $stmtMigrarCotacoes = $conn->prepare(
+                        "UPDATE cotacoes
+                         SET produto = ?, produto_base = ?
+                         WHERE cliente_id = ?
+                         AND {$grupoCotacao} = ?"
+                    );
+                    $stmtMigrarCotacoes->bind_param("ssis", $produto, $produto_base, $clienteIdOriginal, $produtoBaseOriginal);
+
+                    if (!$stmtMigrarCotacoes->execute()) {
+                        throw new RuntimeException('Erro ao migrar cotacoes do produto.');
+                    }
+                }
+
+                if ($produtoBaseOriginal !== $produto_base && tabelaExiste($conn, 'produto_referencias')) {
+                    $stmtMesclarReferencia = $conn->prepare(
+                        "INSERT INTO produto_referencias
+                            (cliente_id, produto_base, valor_ultima_compra, data_ultima_compra)
+                         SELECT cliente_id, ?, valor_ultima_compra, data_ultima_compra
+                         FROM produto_referencias
+                         WHERE cliente_id = ? AND produto_base = ?
+                         LIMIT 1
+                         ON DUPLICATE KEY UPDATE
+                            valor_ultima_compra = COALESCE(produto_referencias.valor_ultima_compra, VALUES(valor_ultima_compra)),
+                            data_ultima_compra = COALESCE(produto_referencias.data_ultima_compra, VALUES(data_ultima_compra))"
+                    );
+                    $stmtMesclarReferencia->bind_param("sis", $produto_base, $clienteIdOriginal, $produtoBaseOriginal);
+
+                    if (!$stmtMesclarReferencia->execute()) {
+                        throw new RuntimeException('Erro ao migrar referencia do produto.');
+                    }
+
+                    $stmtExcluirReferenciaAntiga = $conn->prepare(
+                        "DELETE FROM produto_referencias
+                         WHERE cliente_id = ? AND produto_base = ?"
+                    );
+                    $stmtExcluirReferenciaAntiga->bind_param("is", $clienteIdOriginal, $produtoBaseOriginal);
+
+                    if (!$stmtExcluirReferenciaAntiga->execute()) {
+                        throw new RuntimeException('Erro ao remover referencia antiga do produto.');
+                    }
+                }
+            }
 
         if (colunaProdutoBaseExiste($conn)) {
             $stmtUpdate = $conn->prepare(
@@ -144,18 +215,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         }
 
-        if ($stmtUpdate->execute()) {
+        if (!$stmtUpdate->execute()) {
+            throw new RuntimeException('Erro ao atualizar cotacao.');
+        }
+
+        if (colunaProdutoBaseComprasExiste($conn)) {
+            $stmtCompraVinculada = $conn->prepare(
+                "UPDATE compras
+                 SET produto_base = ?, cliente_id = ?
+                 WHERE cotacao_id = ?"
+            );
+            $stmtCompraVinculada->bind_param("sii", $produto_base, $cliente_id, $id);
+
+            if (!$stmtCompraVinculada->execute()) {
+                throw new RuntimeException('Erro ao atualizar compra vinculada.');
+            }
+        }
+
+        $conn->commit();
+
             registrarAuditoria(
                 $conn,
                 'Edicao de cotacao',
-                'Usuario editou a cotacao ID ' . $id
+                'Usuario editou a cotacao ID ' . $id .
+                ($produtoFoiAlterado ? ' e migrou o produto de ' . $produtoBaseOriginal . ' para ' . $produto_base : '')
             );
 
             header("Location: index.php");
             exit;
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $erro = "Erro ao atualizar cotacao.";
         }
-
-        $erro = "Erro ao atualizar cotacao.";
     }
 
     $cotacao['cliente_id'] = $cliente_id;
@@ -207,7 +298,7 @@ function valorPrecoInput($valor, $casas)
 <a href="index.php" class="botao-exportar">Voltar</a>
 
 <?php if ($possuiCompraVinculada) { ?>
-    <p><strong>Aviso:</strong> esta cota&ccedil;&atilde;o possui compra ativa vinculada. A edi&ccedil;&atilde;o da cota&ccedil;&atilde;o n&atilde;o altera automaticamente o hist&oacute;rico da compra.</p>
+    <p><strong>Aviso:</strong> esta cota&ccedil;&atilde;o possui compra ativa vinculada. Ao renomear o produto, o agrupamento da compra ser&aacute; atualizado sem alterar seus valores hist&oacute;ricos.</p>
 <?php } ?>
 
 <?php if ($erro !== '') { ?>

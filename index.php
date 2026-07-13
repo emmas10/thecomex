@@ -18,12 +18,25 @@ include 'helpers_preco.php';
 <?php
 if ($_SESSION['usuario_tipo'] == 'admin') {
 
+    $grupoCotacaoSql = expressaoProdutoGrupoCotacaoSql('c');
+    $grupoCompraSql = colunaProdutoBaseComprasExiste($conn)
+        ? expressaoProdutoGrupoCompraSql('cp', 'c_compra')
+        : "COALESCE(NULLIF(TRIM(c_compra.produto_base), ''), TRIM(LOWER(cp.produto)))";
+
     $totalCotacoes = $conn->query(
         "SELECT COUNT(*) as total FROM cotacoes"
     )->fetch_assoc()['total'];
 
     $totalProdutos = $conn->query(
-        "SELECT COUNT(DISTINCT produto) as total FROM cotacoes"
+        "SELECT COUNT(DISTINCT produto_base) AS total
+         FROM (
+            SELECT {$grupoCotacaoSql} AS produto_base FROM cotacoes c
+            UNION
+            SELECT {$grupoCompraSql} AS produto_base
+            FROM compras cp
+            LEFT JOIN cotacoes c_compra ON c_compra.id = cp.cotacao_id
+            WHERE cp.status = 'ativa'
+         ) produtos"
     )->fetch_assoc()['total'];
 
     $totalCompras = $conn->query(
@@ -33,7 +46,11 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
 
 } else {
 
-    $cliente_id = $_SESSION['cliente_id'];
+    $cliente_id = intval($_SESSION['cliente_id']);
+    $grupoCotacaoSql = expressaoProdutoGrupoCotacaoSql('c');
+    $grupoCompraSql = colunaProdutoBaseComprasExiste($conn)
+        ? expressaoProdutoGrupoCompraSql('cp', 'c_compra')
+        : "COALESCE(NULLIF(TRIM(c_compra.produto_base), ''), TRIM(LOWER(cp.produto)))";
 
     $totalCotacoes = $conn->query(
         "SELECT COUNT(*) as total
@@ -42,9 +59,16 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
     )->fetch_assoc()['total'];
 
     $totalProdutos = $conn->query(
-        "SELECT COUNT(DISTINCT produto) as total
-         FROM cotacoes
-         WHERE cliente_id = '$cliente_id'"
+        "SELECT COUNT(DISTINCT produto_base) AS total
+         FROM (
+            SELECT {$grupoCotacaoSql} AS produto_base
+            FROM cotacoes c WHERE c.cliente_id = {$cliente_id}
+            UNION
+            SELECT {$grupoCompraSql} AS produto_base
+            FROM compras cp
+            LEFT JOIN cotacoes c_compra ON c_compra.id = cp.cotacao_id
+            WHERE cp.status = 'ativa' AND cp.cliente_id = {$cliente_id}
+         ) produtos"
     )->fetch_assoc()['total'];
 
     $totalCompras = $conn->query(
@@ -113,113 +137,71 @@ if ($_SESSION['usuario_tipo'] == 'admin') {
     </tr>
 
     <?php
-if ($_SESSION['usuario_tipo'] == 'admin') {
+$grupoCotacaoDashboard = expressaoProdutoGrupoCotacaoSql('c');
+$grupoCompraDashboard = colunaProdutoBaseComprasExiste($conn)
+    ? expressaoProdutoGrupoCompraSql('cp', 'c_compra')
+    : "COALESCE(NULLIF(TRIM(c_compra.produto_base), ''), TRIM(LOWER(cp.produto)))";
+$filtroCotacaoDashboard = '';
+$filtroCompraDashboard = "WHERE cp.status = 'ativa'";
 
-$sqlProdutos = "
-    SELECT 
-        produtos.produto_base,
-
-        cot.fornecedor AS fornecedor_cotado,
-        cot.preco AS menor_preco_cotado,
-        cot.preco_casas_decimais AS menor_preco_cotado_casas,
-
-        comp.fornecedor AS fornecedor_comprado,
-        comp.preco_pago AS menor_preco_comprado,
-        comp.preco_pago_casas_decimais AS menor_preco_comprado_casas
-
-    FROM (
-        SELECT TRIM(LOWER(produto)) AS produto_base FROM cotacoes
-
-        UNION
-
-        SELECT TRIM(LOWER(produto)) AS produto_base 
-        FROM compras
-        WHERE status = 'ativa'
-    ) produtos
-
-    LEFT JOIN cotacoes cot
-    ON TRIM(LOWER(cot.produto)) = produtos.produto_base
-    AND cot.preco = (
-        SELECT MIN(c2.preco)
-        FROM cotacoes c2
-        WHERE TRIM(LOWER(c2.produto)) = produtos.produto_base
-    )
-
-    LEFT JOIN compras comp
-    ON TRIM(LOWER(comp.produto)) = produtos.produto_base
-    AND comp.status = 'ativa'
-    AND comp.preco_pago = (
-        SELECT MIN(c3.preco_pago)
-        FROM compras c3
-        WHERE TRIM(LOWER(c3.produto)) = produtos.produto_base
-        AND c3.status = 'ativa'
-    )
-
-    WHERE cot.id IS NOT NULL 
-       OR comp.id IS NOT NULL
-
-    GROUP BY produtos.produto_base
-    ORDER BY produtos.produto_base ASC
-";
-
-} else {
-
-$cliente_id = $_SESSION['cliente_id'];
-
-$sqlProdutos = "
-    SELECT 
-        produtos.produto_base,
-
-        cot.fornecedor AS fornecedor_cotado,
-        cot.preco AS menor_preco_cotado,
-        cot.preco_casas_decimais AS menor_preco_cotado_casas,
-
-        comp.fornecedor AS fornecedor_comprado,
-        comp.preco_pago AS menor_preco_comprado,
-        comp.preco_pago_casas_decimais AS menor_preco_comprado_casas
-
-    FROM (
-        SELECT TRIM(LOWER(produto)) AS produto_base 
-        FROM cotacoes
-        WHERE cliente_id = '$cliente_id'
-
-        UNION
-
-        SELECT TRIM(LOWER(produto)) AS produto_base 
-        FROM compras
-        WHERE status = 'ativa'
-        AND cliente_id = '$cliente_id'
-    ) produtos
-
-    LEFT JOIN cotacoes cot
-    ON TRIM(LOWER(cot.produto)) = produtos.produto_base
-    AND cot.cliente_id = '$cliente_id'
-    AND cot.preco = (
-        SELECT MIN(c2.preco)
-        FROM cotacoes c2
-        WHERE TRIM(LOWER(c2.produto)) = produtos.produto_base
-        AND c2.cliente_id = '$cliente_id'
-    )
-
-    LEFT JOIN compras comp
-    ON TRIM(LOWER(comp.produto)) = produtos.produto_base
-    AND comp.status = 'ativa'
-    AND comp.cliente_id = '$cliente_id'
-    AND comp.preco_pago = (
-        SELECT MIN(c3.preco_pago)
-        FROM compras c3
-        WHERE TRIM(LOWER(c3.produto)) = produtos.produto_base
-        AND c3.status = 'ativa'
-        AND c3.cliente_id = '$cliente_id'
-    )
-
-    WHERE cot.id IS NOT NULL 
-       OR comp.id IS NOT NULL
-
-    GROUP BY produtos.produto_base
-    ORDER BY produtos.produto_base ASC
-";
+if ($_SESSION['usuario_tipo'] != 'admin') {
+    $cliente_id = intval($_SESSION['cliente_id']);
+    $filtroCotacaoDashboard = "WHERE c.cliente_id = {$cliente_id}";
+    $filtroCompraDashboard = "WHERE cp.status = 'ativa' AND cp.cliente_id = {$cliente_id}";
 }
+
+$sqlProdutos = "
+    WITH cotacoes_ordenadas AS (
+        SELECT
+            {$grupoCotacaoDashboard} AS produto_base,
+            c.produto,
+            c.fornecedor,
+            c.preco,
+            c.preco_casas_decimais,
+            ROW_NUMBER() OVER (
+                PARTITION BY {$grupoCotacaoDashboard}
+                ORDER BY c.preco ASC, c.id ASC
+            ) AS posicao
+        FROM cotacoes c
+        {$filtroCotacaoDashboard}
+    ),
+    compras_ordenadas AS (
+        SELECT
+            {$grupoCompraDashboard} AS produto_base,
+            cp.produto,
+            cp.fornecedor,
+            cp.preco_pago,
+            cp.preco_pago_casas_decimais,
+            ROW_NUMBER() OVER (
+                PARTITION BY {$grupoCompraDashboard}
+                ORDER BY cp.preco_pago ASC, cp.id ASC
+            ) AS posicao
+        FROM compras cp
+        LEFT JOIN cotacoes c_compra ON c_compra.id = cp.cotacao_id
+        {$filtroCompraDashboard}
+    ),
+    produtos AS (
+        SELECT produto_base FROM cotacoes_ordenadas
+        UNION
+        SELECT produto_base FROM compras_ordenadas
+    )
+    SELECT
+        produtos.produto_base,
+        COALESCE(cot.produto, comp.produto, produtos.produto_base) AS produto_nome,
+        cot.fornecedor AS fornecedor_cotado,
+        cot.preco AS menor_preco_cotado,
+        cot.preco_casas_decimais AS menor_preco_cotado_casas,
+        comp.fornecedor AS fornecedor_comprado,
+        comp.preco_pago AS menor_preco_comprado,
+        comp.preco_pago_casas_decimais AS menor_preco_comprado_casas
+    FROM produtos
+    LEFT JOIN cotacoes_ordenadas cot
+        ON cot.produto_base = produtos.produto_base AND cot.posicao = 1
+    LEFT JOIN compras_ordenadas comp
+        ON comp.produto_base = produtos.produto_base AND comp.posicao = 1
+    WHERE produtos.produto_base IS NOT NULL AND produtos.produto_base <> ''
+    ORDER BY produto_nome ASC
+";
 
 $resultadoProdutos = $conn->query($sqlProdutos);
 
@@ -230,7 +212,7 @@ if (!$resultadoProdutos) {
 } else {
     while ($produto = $resultadoProdutos->fetch_assoc()) {
         echo "<tr>";
-        echo "<td>" . ucfirst($produto['produto_base']) . "</td>";
+        echo "<td>" . htmlspecialchars($produto['produto_nome'], ENT_QUOTES, 'UTF-8') . "</td>";
         echo "<td>" . ($produto['fornecedor_cotado'] ?? 'Sem cotação') . "</td>";
 
         if ($produto['menor_preco_cotado'] !== null) {
@@ -381,26 +363,36 @@ if (!$resultadoProdutos) {
 
     while ($linha = $resultado->fetch_assoc()) {
         $produtoAtual = $linha['produto'];
+        $produtoGrupoAtual = obterProdutoGrupoCotacao($linha);
         $dataCotacaoAtual = $linha['data_cotacao'];
+
+$grupoCotacaoMenor = expressaoProdutoGrupoCotacaoSql();
 
 if ($_SESSION['usuario_tipo'] == 'admin') {
 
-    $sqlMenor = "SELECT MIN(preco) AS menor_preco
-                 FROM cotacoes
-                 WHERE produto = '$produtoAtual'";
+    $stmtMenor = $conn->prepare(
+        "SELECT MIN(preco) AS menor_preco
+         FROM cotacoes
+         WHERE {$grupoCotacaoMenor} = ?"
+    );
+    $stmtMenor->bind_param("s", $produtoGrupoAtual);
 
 } else {
 
-    $cliente_id = $_SESSION['cliente_id'];
+    $cliente_id = intval($_SESSION['cliente_id']);
 
-    $sqlMenor = "SELECT MIN(preco) AS menor_preco
-                 FROM cotacoes
-                 WHERE produto = '$produtoAtual'
-                 AND cliente_id = '$cliente_id'";
+    $stmtMenor = $conn->prepare(
+        "SELECT MIN(preco) AS menor_preco
+         FROM cotacoes
+         WHERE {$grupoCotacaoMenor} = ?
+         AND cliente_id = ?"
+    );
+    $stmtMenor->bind_param("si", $produtoGrupoAtual, $cliente_id);
 
 }
 
-$resultadoMenor = $conn->query($sqlMenor);
+$stmtMenor->execute();
+$resultadoMenor = $stmtMenor->get_result();
 $menor = $resultadoMenor->fetch_assoc()['menor_preco'];
         if ($linha['preco'] == $menor) {
             echo "<tr style='background-color: #75b337; font-weight: bold;'>";
@@ -424,12 +416,17 @@ echo "<td>" . $linha['fornecedor'] . "</td>";
       $clienteCotacao = intval($linha['cliente_id']);
       $idCotacaoAtual = intval($linha['id']);
 
+$grupoCompraAnterior = colunaProdutoBaseComprasExiste($conn)
+    ? expressaoProdutoGrupoCompraSql('compras', 'cotacao_compra')
+    : "COALESCE(NULLIF(TRIM(cotacao_compra.produto_base), ''), TRIM(LOWER(compras.produto)))";
+$grupoCotacaoCompraAnterior = expressaoProdutoGrupoCotacaoSql('cotacao_compra');
+
 $stmtCompra = $conn->prepare(
     "SELECT compras.*
      FROM compras
      LEFT JOIN cotacoes cotacao_compra
      ON compras.cotacao_id = cotacao_compra.id
-     WHERE TRIM(LOWER(compras.produto)) = TRIM(LOWER(?))
+     WHERE {$grupoCompraAnterior} = ?
      AND compras.status = 'ativa'
      AND compras.cliente_id = ?
      AND (compras.cotacao_id IS NULL OR compras.cotacao_id <> ?)
@@ -437,7 +434,7 @@ $stmtCompra = $conn->prepare(
         (
             compras.cotacao_id IS NOT NULL
             AND cotacao_compra.cliente_id = ?
-            AND TRIM(LOWER(cotacao_compra.produto)) = TRIM(LOWER(?))
+            AND {$grupoCotacaoCompraAnterior} = ?
             AND (
                 cotacao_compra.data_cotacao < ?
                 OR (
@@ -460,11 +457,11 @@ $stmtCompra = $conn->prepare(
 );
 $stmtCompra->bind_param(
     "siiisssis",
-    $produtoAtual,
+    $produtoGrupoAtual,
     $clienteCotacao,
     $idCotacaoAtual,
     $clienteCotacao,
-    $produtoAtual,
+    $produtoGrupoAtual,
     $dataCotacaoAtual,
     $dataCotacaoAtual,
     $idCotacaoAtual,
