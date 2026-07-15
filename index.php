@@ -8,7 +8,7 @@ include 'helpers_preco.php';
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>TheComex - Cotações</title>
+    <title>Sistema de Cotações - Latin America Chemicals</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
