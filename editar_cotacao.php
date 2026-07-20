@@ -124,21 +124,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($produtoBaseOriginal !== $produto_base && tabelaExiste($conn, 'produto_referencias')) {
-                    $stmtMesclarReferencia = $conn->prepare(
-                        "INSERT INTO produto_referencias
-                            (cliente_id, produto_base, valor_ultima_compra, data_ultima_compra)
-                         SELECT cliente_id, ?, valor_ultima_compra, data_ultima_compra
+                    $stmtReferenciaAntiga = $conn->prepare(
+                        "SELECT valor_ultima_compra, data_ultima_compra
                          FROM produto_referencias
                          WHERE cliente_id = ? AND produto_base = ?
-                         LIMIT 1
-                         ON DUPLICATE KEY UPDATE
-                            valor_ultima_compra = COALESCE(produto_referencias.valor_ultima_compra, VALUES(valor_ultima_compra)),
-                            data_ultima_compra = COALESCE(produto_referencias.data_ultima_compra, VALUES(data_ultima_compra))"
+                         LIMIT 1"
                     );
-                    $stmtMesclarReferencia->bind_param("sis", $produto_base, $clienteIdOriginal, $produtoBaseOriginal);
+                    $stmtReferenciaAntiga->bind_param("is", $clienteIdOriginal, $produtoBaseOriginal);
 
-                    if (!$stmtMesclarReferencia->execute()) {
-                        throw new RuntimeException('Erro ao migrar referencia do produto.');
+                    if (!$stmtReferenciaAntiga->execute()) {
+                        throw new RuntimeException('Erro ao consultar referencia antiga do produto.');
+                    }
+
+                    $referenciaAntiga = $stmtReferenciaAntiga->get_result()->fetch_assoc();
+
+                    if ($referenciaAntiga) {
+                        $valorUltimaCompra = $referenciaAntiga['valor_ultima_compra'];
+                        $dataUltimaCompra = $referenciaAntiga['data_ultima_compra'];
+
+                        $stmtMesclarReferencia = $conn->prepare(
+                            "INSERT INTO produto_referencias
+                                (cliente_id, produto_base, valor_ultima_compra, data_ultima_compra)
+                             VALUES (?, ?, ?, ?)
+                             ON DUPLICATE KEY UPDATE
+                                valor_ultima_compra = COALESCE(produto_referencias.valor_ultima_compra, VALUES(valor_ultima_compra)),
+                                data_ultima_compra = COALESCE(produto_referencias.data_ultima_compra, VALUES(data_ultima_compra))"
+                        );
+                        $stmtMesclarReferencia->bind_param(
+                            "isss",
+                            $clienteIdOriginal,
+                            $produto_base,
+                            $valorUltimaCompra,
+                            $dataUltimaCompra
+                        );
+
+                        if (!$stmtMesclarReferencia->execute()) {
+                            throw new RuntimeException('Erro ao migrar referencia do produto.');
+                        }
                     }
 
                     $stmtExcluirReferenciaAntiga = $conn->prepare(
@@ -245,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } catch (Throwable $e) {
             $conn->rollback();
+            error_log('Erro ao editar cotacao ID ' . $id . ': ' . $e->getMessage());
             $erro = "Erro ao atualizar cotacao.";
         }
     }

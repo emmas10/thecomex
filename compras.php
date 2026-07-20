@@ -54,7 +54,7 @@ $resultado = $conn->query($sql);
             } else {
                 echo "<tr>";
             }
-
+            
             echo "<td>" . $linha['produto'] . "</td>";
             echo "<td>" . $linha['fornecedor'] . "</td>";
             echo "<td>" . ($linha['usuario_nome'] ?? 'Não informado') . "</td>";
